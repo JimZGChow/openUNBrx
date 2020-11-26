@@ -29,6 +29,7 @@ MainWindow::MainWindow(QWidget *parent)
     qLineSeries100_Freq = new QLineSeries();
     qLineSeries100_En = new QLineSeries();
     qLineSeries100_Corr = new QLineSeries();
+    qLineSeries100_Bit = new QLineSeries();
     recvDataArray = new QByteArray();
     QChartView *chartView = new QChartView(qChart1M);
     QChartView *chartView2 = new QChartView(qChart100);
@@ -56,11 +57,13 @@ MainWindow::MainWindow(QWidget *parent)
     qChart100->addSeries(qLineSeries100_Phase);
     qChart100->addSeries(qLineSeries100_En);
     qChart100->addSeries(qLineSeries100_Corr);
+    qChart100->addSeries(qLineSeries100_Bit);
     QValueAxis *axisX2 = new QValueAxis;
     axisX2->setRange(0, maxIQ);
     axisX2->setLabelFormat("%g");
     axisX2->setTitleText("Samples");
-    axisX2->setTickCount(11);
+    axisX2->setTickCount(101);
+    //axisX2->setTickCount(11);
     QValueAxis *axisY2 = new QValueAxis;
     axisY2->setRange(-1.00, 1.00);
     axisY2->setTitleText("Audio level");
@@ -71,6 +74,7 @@ MainWindow::MainWindow(QWidget *parent)
     qLineSeries100_Freq->attachAxis(axisX2);
     qLineSeries100_En->attachAxis(axisX2);
     qLineSeries100_Corr->attachAxis(axisX2);
+    qLineSeries100_Bit->attachAxis(axisX2);
     qChart100->addAxis(axisY2, Qt::AlignLeft);
     qLineSeries100_I->attachAxis(axisY2);
     qLineSeries100_Q->attachAxis(axisY2);
@@ -78,6 +82,7 @@ MainWindow::MainWindow(QWidget *parent)
     qLineSeries100_Freq->attachAxis(axisY2);
     qLineSeries100_En->attachAxis(axisY2);
     qLineSeries100_Corr->attachAxis(axisY2);
+    qLineSeries100_Bit->attachAxis(axisY2);
     QColor cRed, cGreen, cBlue, cColor, cCorr;
     cRed.setRgb(255, 0, 0);
     cGreen.setRgb(0, 255, 0);
@@ -159,6 +164,11 @@ void MainWindow::evtCheckBoxIQFP(int state ) {
         qLineSeries100_Corr->replace(chanDataCorr);
     else
         qLineSeries100_Corr->clear();
+
+    if (ui->checkBox_bit->checkState() == 2)
+        qLineSeries100_Bit->replace(chanDataBit);
+    else
+        qLineSeries100_Bit->clear();
 }
 
 void MainWindow::wheelEvent(QWheelEvent *event) {
@@ -222,6 +232,12 @@ void MainWindow::evtChangeFreq() {
     update100HzData();
 }
 
+float MainWindow::getSelectedFreq() {
+    float fr = ui->lineEdit_freq->text().toDouble();
+    sinG->setFreq(fr);
+    return  fr;
+}
+
 void MainWindow::evtSaveToFile() {
     QFile file("data.complex");
     if (!file.open(QIODevice::WriteOnly)) {
@@ -235,14 +251,22 @@ void MainWindow::evtSaveToFile() {
 }
 
 void MainWindow::push100HzData(float* data_in) {
+
+//    for (int i=0; i<maxIQ; i++) {
+//        data100hz.push_back(data_in[i*2 + 0]);
+//        data100hz.push_back(data_in[i*2 + 1]);
+//    }
+
     data100hz.push_back(data_in[0]);
     data100hz.push_back(data_in[1]);
 
     if (ui->checkBox_run_100hz->checkState() == 2) {
-        if (data100hz.size() > maxIQ*2) {
+        if (data100hz.size() >= maxIQ*2) {
             memcpy(data100hzGUI, data100hz.data(), data100hz.size() * sizeof(float));
             update100HzData();
+
             data100hz.clear();
+
         }
     }
     else {
@@ -251,6 +275,9 @@ void MainWindow::push100HzData(float* data_in) {
 }
 
 void MainWindow::push1MHzData(fftwf_complex *data_in, int size) {
+    if (ui->checkBox_run_1mhz->checkState() != 2)
+        return;
+
     QVector<QPointF> m_buffer;
     QPointF max(0, -10000);
 
@@ -290,6 +317,7 @@ void MainWindow::update100HzData() {
     chanDataFreq.clear();
     chanDataEn.clear();
     chanDataCorr.clear();
+    chanDataBit.clear();
 
     float phase1, phase2;
     //sinG->reset();
@@ -308,15 +336,23 @@ void MainWindow::update100HzData() {
 
             //chanDataCorr.push_back(QPointF(maxIQ - 1 - i, -dataF[(i-1)*2] * dataF[i*2 + 1] + dataF[(i-1)*2 + 1] * dataF[i*2]));
 
-        if (chanDataEn[i].y() > -60) {
-            phase1 = atan2f(dataF[i*2 + 1] * sQ, dataF[i*2] * sI);
-            chanDataPhase.push_back(QPointF(maxIQ - 1 - i, phase1/div));
-            chanDataFreq.push_back(QPointF(maxIQ - 1 - i, (phase1 - phase2)/div));
-            phase2 = phase1;
+        //if (chanDataEn[i].y() > -60) {
+        phase1 = atan2f(dataF[i*2 + 1] * sQ, dataF[i*2] * sI);
+        chanDataPhase.push_back(QPointF(maxIQ - 1 - i, phase1/div));
+        chanDataFreq.push_back(QPointF(maxIQ - 1 - i, (phase1 - phase2)/div));
+        float ff = fmodf(phase1 - phase2, 2 * M_PI);
+        if (ff < 0)
+            ff += M_PI*2;
 
-            if (i > 0)
-                chanDataCorr.push_back(QPointF(maxIQ - 1 - i, dataF[i*2] * sI * dataF[(i-1)*2] * sI + dataF[i*2 + 1] * sQ * dataF[(i-1)*2 + 1] * sQ));
-        }
+        if ((ff > M_PI/2) && (ff < 3*M_PI/2))
+            chanDataBit.push_back(QPointF(maxIQ - 1 - i, 0.1));
+         else
+            chanDataBit.push_back(QPointF(maxIQ - 1 - i, -0.1));
+        phase2 = phase1;
+
+        if (i > 0)
+            chanDataCorr.push_back(QPointF(maxIQ - 1 - i, dataF[i*2] * sI * dataF[(i-1)*2] * sI + dataF[i*2 + 1] * sQ * dataF[(i-1)*2 + 1] * sQ));
+        //}
     }
 
     if (ui->checkBox_100_i->checkState() == 2)
@@ -348,4 +384,9 @@ void MainWindow::update100HzData() {
         qLineSeries100_Corr->replace(chanDataCorr);
     else
         qLineSeries100_Corr->clear();
+
+    if (ui->checkBox_bit->checkState() == 2)
+        qLineSeries100_Bit->replace(chanDataBit);
+    else
+        qLineSeries100_Bit->clear();
 }

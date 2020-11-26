@@ -2,6 +2,8 @@
 #include "SDRDevInfo.h"
 #include "demodulator.h"
 #include "pcscl_noperm.h"
+#include "udp_reciever.h"
+#include "preamblepoint.h"
 
 #include <algorithm>
 #include <iostream>
@@ -37,9 +39,39 @@ void recvData(SoapySDR::Device* dev, SoapySDR::Stream* stream, std::vector<char>
     Demodulator dem(dev->getSampleRate(SOAPY_SDR_RX, 0));
 
     struct timespec begin, end;
+    UDP_Reciever udp(recvBuf->size());
+    //udp.readData((uint8_t*)Buffs[0]);
+    std::fstream f("/home/pi/1M_openUNB.complex");
+
+    float k=0;
+
+    int seek = 1000000 * 2 * sizeof(float) + 4000000;
+    int step = 1000000 * 2 * sizeof(float) * 1;
+    char* data = new char[step];
 
     while(!g_exitRecvThread){
         int n_stream_read = dev->readStream(stream, Buffs, numElems, flags, timeNs, maxTimeout);
+        //int n_stream_read = udp.readData((uint8_t*)Buffs[0]);
+//        int n_stream_read;
+
+//        f.seekg(seek, std::ios_base::beg);
+//        std::cout << " pos " << f.tellg() << std::endl;
+//        f.read(data, step);
+//        dem.addIQ(data, step / (sizeof(float) * 2));
+//        usleep(1000000);
+//        //seek += step;
+//        if (seek > 38000000 - step)
+//            seek = 0;
+//        continue;
+//        float* f = (float*)Buffs[0];
+//        for (int i=0; i<n_stream_read; i++) {
+//            f[i*2] = k;
+//            f[i*2 + 1] = k;
+
+//            k += 0.001;
+//            if (k > 1)
+//                k = 0;
+//        }
 
         if(n_stream_read < 0)
             std::cout << " Soapy read failed with code: " << n_stream_read << std::endl;

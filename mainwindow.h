@@ -36,6 +36,7 @@ public:
     ~MainWindow();
 
     int getSelectedChannel();
+    float getSelectedFreq();
     void push100HzData(float* data_in);
     void push1MHzData(fftwf_complex* data_in, int size);
 
@@ -50,10 +51,10 @@ private:
     QLineSeries* qLineSeries100_Freq;
     QLineSeries* qLineSeries100_En;
     QLineSeries* qLineSeries100_Corr;
+    QLineSeries* qLineSeries100_Bit;
 
     QByteArray* recvDataArray;
     bool expData;
-
 
     QVector<QPointF> chanDataI;
     QVector<QPointF> chanDataQ;
@@ -61,6 +62,7 @@ private:
     QVector<QPointF> chanDataFreq;
     QVector<QPointF> chanDataEn;
     QVector<QPointF> chanDataCorr;
+    QVector<QPointF> chanDataBit;
     QVector<float> data100hz;
     float* data100hzGUI;
     int maxIQ = 100;

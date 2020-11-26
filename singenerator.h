@@ -9,6 +9,7 @@ class SinCosGenerator
 {
 public:
     SinCosGenerator(int sampleRate, float freq);
+    SinCosGenerator();
 
     float nextSin();
     float nextCos();
@@ -18,8 +19,8 @@ public:
     void reset() {delta = 0;};
 
 private:
-    int sr;
-    int fr;
+    double sr;
+    double fr;
     double div;
     double delta;
 };

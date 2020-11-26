@@ -176,6 +176,13 @@
            </widget>
           </item>
           <item>
+           <widget class="QCheckBox" name="checkBox_bit">
+            <property name="text">
+             <string>bit</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QLineEdit" name="lineEdit_freq"/>
           </item>
           <item>
@@ -219,7 +226,7 @@
      <x>0</x>
      <y>0</y>
      <width>925</width>
-     <height>20</height>
+     <height>17</height>
     </rect>
    </property>
   </widget>

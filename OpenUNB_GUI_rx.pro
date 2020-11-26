@@ -32,7 +32,10 @@ SOURCES += \
         demodulator.cpp \
         singenerator.cpp \
         pcscl_noperm.cpp \
-        crc_ok.cpp
+        crc_ok.cpp \
+    udp_reciever.cpp \
+    preamblepoint.cpp \
+    decoder.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -44,7 +47,10 @@ HEADERS += \
         fdacoefs_1M_to_100.h \
         singenerator.h \
     pcscl_noperm.h \
-    crc_ok.h
+    crc_ok.h \
+    udp_reciever.h \
+    preamblepoint.h \
+    decoder.h
 
 FORMS += \
         mainwindow.ui
