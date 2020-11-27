@@ -39,7 +39,7 @@ void recvData(SoapySDR::Device* dev, SoapySDR::Stream* stream, std::vector<char>
     Demodulator dem(dev->getSampleRate(SOAPY_SDR_RX, 0));
 
     struct timespec begin, end;
-    UDP_Reciever udp(recvBuf->size());
+    //UDP_Reciever udp(recvBuf->size());
     //udp.readData((uint8_t*)Buffs[0]);
     std::fstream f("/home/pi/1M_openUNB.complex");
 

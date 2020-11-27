@@ -6,7 +6,10 @@
 #include <unistd.h>
 #include <queue>
 #include <iostream>
+
 #include "preamblepoint.h"
+#include "pcscl_noperm.h"
+#include "VectorHelper.h"
 
 class Decoder
 {

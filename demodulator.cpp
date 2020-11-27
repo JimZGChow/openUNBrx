@@ -15,7 +15,7 @@ Demodulator::Demodulator(int inSempleRate) {
     q1 = new float[numOfChannels];
 
     guiTh = new std::thread(&Demodulator::guiThread, this, 0, nullptr);
-    speedTh = new std::thread(&Demodulator::freqCounter, this);
+    //speedTh = new std::thread(&Demodulator::freqCounter, this);
 
     scg.setFreq(0);
     scg.setSampleRate(1000000);
@@ -61,7 +61,6 @@ void Demodulator::addIQ(void* data, int size) {
         window->push1MHzData(fftw_out, numOfChannels);
     }
 
-    std::cout << channeslData[0].size() << std::endl;
     if (channeslData[0].size() > 100) {
         for (int i=0; i<PreamblePointWithoutFullData.size(); i++) {
             if (PreamblePointWithoutFullData[i]->data.size() >= (DATA_LEN + PREAMBLE_LEN + 1)) {
@@ -71,9 +70,6 @@ void Demodulator::addIQ(void* data, int size) {
             } else {
                 PreamblePointWithoutFullData[i]->data.insert(PreamblePointWithoutFullData[i]->data.end(), channeslData[PreamblePointWithoutFullData[i]->channel].begin() + PREAMBLE_LEN, channeslData[PreamblePointWithoutFullData[i]->channel].end());
             }
-
-
-
         }
 
         for (int i=0; i<numOfChannels; i++) {
@@ -227,6 +223,13 @@ void Demodulator::findPreambles(int ch) {
             std::cout << " Errors: " << err1 << std::endl;
             std::cout << " Data: " << uint32ToSring(corr[ch]) << std::endl;
             std::cout << " Expt: " << uint32ToSring(prea) << std::endl;
+            float qAvg = 0;
+            float iAvg = 0;
+            for (int i=0; i<32; i++) {
+                qAvg += abs(channeslData[ch][x - i].imag());
+                iAvg += abs(channeslData[ch][x - i].real());
+            }
+            std::cout << " qAvg: " << qAvg/iAvg << std::endl;
 
             PreamblePoint* pp = new PreamblePoint;
             pp->channel = ch;
@@ -241,6 +244,13 @@ void Demodulator::findPreambles(int ch) {
             std::cout << " Errors: " << err2 << std::endl;
             std::cout << " Data: " << uint32ToSring(inv_corr[ch]) << std::endl;
             std::cout << " Expt: " << uint32ToSring(~prea) << std::endl;
+            float qAvg = 0;
+            float iAvg = 0;
+            for (int i=0; i<32; i++) {
+                qAvg += abs(channeslData[ch][x - i].imag());
+                iAvg += abs(channeslData[ch][x - i].real());
+            }
+            std::cout << " qAvg: " << qAvg/iAvg << std::endl;
 
             PreamblePoint* pp = new PreamblePoint;
             pp->channel = ch;
@@ -250,7 +260,7 @@ void Demodulator::findPreambles(int ch) {
         }
 
         err1 =  bitDif(~corr[ch], prea);
-        err2 =  bitDif(~inv_corr[ch], (~prea));
+        err2 =  bitDif(~inv_corr[ch], prea);
 
         if (err1 <= MAX_ERRORS) {
             std::cout << "Preamble inv!!!" << std::endl;
@@ -258,6 +268,13 @@ void Demodulator::findPreambles(int ch) {
             std::cout << " Errors: " << err1 << std::endl;
             std::cout << " Data: " << uint32ToSring(corr[ch]) << std::endl;
             std::cout << " Expt: " << uint32ToSring(prea) << std::endl;
+            float qAvg = 0;
+            float iAvg = 0;
+            for (int i=0; i<32; i++) {
+                qAvg += abs(channeslData[ch][x - i].imag());
+                iAvg += abs(channeslData[ch][x - i].real());
+            }
+            std::cout << " qAvg: " << qAvg/iAvg << std::endl;
 
             PreamblePoint* pp = new PreamblePoint;
             pp->channel = ch;
@@ -272,10 +289,17 @@ void Demodulator::findPreambles(int ch) {
             std::cout << " Errors: " << err2 << std::endl;
             std::cout << " Data: " << uint32ToSring(inv_corr[ch]) << std::endl;
             std::cout << " Expt: " << uint32ToSring(~prea) << std::endl;
+            float qAvg = 0;
+            float iAvg = 0;
+            for (int i=0; i<32; i++) {
+                qAvg += abs(channeslData[ch][x - i].imag());
+                iAvg += abs(channeslData[ch][x - i].real());
+            }
+            std::cout << " qAvg: " << qAvg/iAvg << std::endl;
 
             PreamblePoint* pp = new PreamblePoint;
             pp->channel = ch;
-            pp->inv = PreamblePoint::invIQ | PreamblePoint::invIQ;
+            pp->inv = PreamblePoint::invBits | PreamblePoint::invIQ;
             pp->data.insert(pp->data.begin(), channeslData[ch].begin() + x - 32,channeslData[ch].begin() + x - 32 + std::min(channeslData[ch].size() - x + 32, (size_t)(DATA_LEN + PREAMBLE_LEN + 1)));
             PreamblePointWithoutFullData.push_back(pp);
         }

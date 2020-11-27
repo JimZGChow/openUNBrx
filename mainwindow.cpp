@@ -20,6 +20,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->lineEdit_div, SIGNAL(returnPressed()), this, SLOT(evtChangeDiv()));
     connect(ui->pushButton_save, SIGNAL(released()), this, SLOT(evtSaveToFile()));
 
+#ifdef QT_CHARTS
     qChart1M = new QChart();
     qLineSeries1M = new QLineSeries();
     qChart100 = new QChart();
@@ -41,6 +42,7 @@ MainWindow::MainWindow(QWidget *parent)
     axisX->setTitleText("Freq");
     QValueAxis *axisY = new QValueAxis;
     axisY->setRange(-100.00, 20.00);
+    axisY->setTickCount(30);
     axisY->setTitleText("Audio level");
     qChart1M->addAxis(axisX, Qt::AlignBottom);
     qLineSeries1M->attachAxis(axisX);
@@ -98,7 +100,7 @@ MainWindow::MainWindow(QWidget *parent)
     qChart100->setTitle("Data");
 
     ui->verticalLayout_100hz->addWidget(chartView2);
-
+#endif
     sinG = new SinCosGenerator(100, 0);
 
     data100hzGUI = new float[maxIQ*10];
@@ -135,6 +137,7 @@ void MainWindow::evtCheckBoxRun(int state ) {
 }
 
 void MainWindow::evtCheckBoxIQFP(int state ) {
+#ifdef QT_CHARTS
     if (ui->checkBox_100_i->checkState() == 2)
         qLineSeries100_I->replace(chanDataI);
     else
@@ -169,12 +172,13 @@ void MainWindow::evtCheckBoxIQFP(int state ) {
         qLineSeries100_Bit->replace(chanDataBit);
     else
         qLineSeries100_Bit->clear();
+#endif
 }
 
 void MainWindow::wheelEvent(QWheelEvent *event) {
     //qDebug() << "evt " << event->angleDelta();
     //qDebug() << ui->tabWidget->currentIndex();
-
+#ifdef QT_CHARTS
     if (ui->tabWidget->currentIndex() == 2) {
         //qDebug() << "evt " << event->buttons();
 
@@ -207,6 +211,7 @@ void MainWindow::wheelEvent(QWheelEvent *event) {
             }
         }
     }
+#endif
 }
 
 void  MainWindow::evtChangeChannel() {
@@ -216,9 +221,10 @@ void  MainWindow::evtChangeChannel() {
 
 
     //soc->write((char*)&data, sizeof(sendData));
-
+#ifdef QT_CHARTS
     qLineSeries100_I->replace(chanDataI);
     qLineSeries100_Q->replace(chanDataQ);
+#endif
 }
 
 void MainWindow::evtChangeDiv() {
@@ -301,8 +307,9 @@ void MainWindow::push1MHzData(fftwf_complex *data_in, int size) {
     if ( max.y() > -70)
         ui->textBrowser_log->append("Signal on " + QString::number(max.x()) + " ch");
 
-
+#ifdef QT_CHARTS
     qLineSeries1M->replace(m_buffer);
+#endif
 }
 
 int MainWindow::getSelectedChannel() {
@@ -354,7 +361,7 @@ void MainWindow::update100HzData() {
             chanDataCorr.push_back(QPointF(maxIQ - 1 - i, dataF[i*2] * sI * dataF[(i-1)*2] * sI + dataF[i*2 + 1] * sQ * dataF[(i-1)*2 + 1] * sQ));
         //}
     }
-
+#ifdef QT_CHARTS
     if (ui->checkBox_100_i->checkState() == 2)
         qLineSeries100_I->replace(chanDataI);
     else
@@ -389,4 +396,5 @@ void MainWindow::update100HzData() {
         qLineSeries100_Bit->replace(chanDataBit);
     else
         qLineSeries100_Bit->clear();
+#endif
 }

@@ -1,13 +1,17 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#define QT_CHARTS
+
 #include <QMainWindow>
 #include <QFile>
+#ifdef QT_CHARTS
 #include <QtCharts/QXYSeries>
 #include <QtCharts/QChartView>
 #include <QtCharts/QLineSeries>
 #include <QtCharts/QChart>
 #include <QtCharts/QValueAxis>
+#endif
 #include <QWheelEvent>
 #include <math.h>
 #include "singenerator.h"
@@ -25,7 +29,9 @@ QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
 
+#ifdef QT_CHARTS
 QT_CHARTS_USE_NAMESPACE
+#endif
 
 class MainWindow : public QMainWindow
 {
@@ -42,6 +48,8 @@ public:
 
 private:
     Ui::MainWindow* ui;
+
+#ifdef QT_CHARTS
     QChart* qChart1M;
     QLineSeries* qLineSeries1M;
     QChart* qChart100;
@@ -52,7 +60,7 @@ private:
     QLineSeries* qLineSeries100_En;
     QLineSeries* qLineSeries100_Corr;
     QLineSeries* qLineSeries100_Bit;
-
+#endif
     QByteArray* recvDataArray;
     bool expData;
 
