@@ -1,7 +1,7 @@
 #include "udp_reciever.h"
 
 UDP_Reciever::UDP_Reciever(int _maxDataSize) {
-
+/*
     std::cout << "Init UDP server (" << _maxDataSize << ")" << std::endl;
     // Creating socket file descriptor
 
@@ -25,8 +25,10 @@ UDP_Reciever::UDP_Reciever(int _maxDataSize) {
     }
 
     maxDataSize = _maxDataSize;
-/*
+*/
 
+/*
+    std::cout << "Init TCP server (" << _maxDataSize << ")" << std::endl;
     //Create socket
     sock = socket(AF_INET , SOCK_STREAM , 0);
     if (sock == -1) {
@@ -61,17 +63,40 @@ UDP_Reciever::UDP_Reciever(int _maxDataSize) {
     }
     std::cout << "Connection accepted" << std::endl;
 */
+    std::cout << "Init TCP client (" << _maxDataSize << ")" << std::endl;
+    sock = socket(AF_INET , SOCK_STREAM , 0);
+    if (sock == -1) {
+        std::cout << "Could not create socket" << std::endl;
+        return;
+    }
+
+    //servaddr.sin_addr.s_addr = inet_addr("169.254.68.184");
+    servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    servaddr.sin_family = AF_INET;
+    //servaddr.sin_addr.s_addr = INADDR_ANY;
+    servaddr.sin_port = htons(12128);
+
+    c = sizeof(servaddr);
+
+    //accept connection from an incoming client
+    client_sock = connect(sock, (sockaddr*)&servaddr, sizeof (servaddr));
+    if (client_sock < 0) {
+        std::cout << "accept failed" << std::endl;
+        return;
+    }
+    std::cout << "Connection accepted" << std::endl;
 }
 
 int UDP_Reciever::readData(uint8_t *data) {
 
 
-    //int n = recv(client_sock, data, maxDataSize, 0);
-    int n = recvfrom(sock, (char *)data, maxDataSize, MSG_WAITALL, ( struct sockaddr *) &client, (socklen_t*)&c);
-    std::cout << "Recieve " << n << std::endl;
+    int n = recv(sock, data, 1024*1024, MSG_WAITALL);
+    //int n = recvfrom(sock, (char *)data, maxDataSize, MSG_WAITALL, ( struct sockaddr *) &client, (socklen_t*)&c);
+    //std::cout << "Recieve " << n << std::endl;
 
     if (n < 0) {
         perror("err ");
+        exit(-1);
     }
 
     n = n / (sizeof (float) * 2);

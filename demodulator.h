@@ -12,6 +12,8 @@
 #include <complex>
 #include <thread>
 #include <unistd.h>
+#include <iterator>
+#include <random>
 
 //#include "fdacoefs.h"
 #include "fdacoefs_125K_to_100.h"
@@ -30,7 +32,7 @@
 #define X2                  (X2_CHANNELS * 2)
 #define CHANNELS            (SAMPLE_RATE / CHANNEL_SAMPLE_RATE * X2)
 
-#define DATA_LEN            128
+#define DATA_LEN            256
 #define MAX_ERRORS          2
 #define PREAMBLE_LEN        32
 
@@ -79,15 +81,14 @@ private:
 
     void channelize();
     void decimation();
-    void findPreambles(int ch);
+    int findPreambles(int ch);
     void dumpToFile(std::string fileName, void* data, size_t size);
     int bitDif(uint32_t, uint32_t);
-    uint64_t toDifCoding64(uint64_t);
-    uint32_t toDifCoding32(uint32_t);
     uint64_t toFromCoding(uint64_t);
 
     void freqCounter();
     void guiThread(int argc, char *argv[]);
+    float noise;
 
     std::string uint32ToSring(uint32_t);
 };

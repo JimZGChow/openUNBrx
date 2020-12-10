@@ -6,6 +6,8 @@
 #include <unistd.h>
 #include <queue>
 #include <iostream>
+#include <fstream>
+#include <cstring>
 
 #include "preamblepoint.h"
 #include "pcscl_noperm.h"
@@ -17,6 +19,7 @@ public:
     Decoder();
 
     void pushPreablePoint(PreamblePoint* pp);
+    int size();
 private:
     std::mutex mut;
     std::queue<PreamblePoint*> preablePointVector;

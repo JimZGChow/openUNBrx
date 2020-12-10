@@ -322,6 +322,12 @@ vector<uint8_t> crc_ok_array(uint32_t polynom, vector<vector<uint8_t>> a)
     return res;
 }
 
+vector<uint8_t> remove_crc(vector<uint8_t> a)
+{
+    vector<uint8_t> res = a;
+    res.erase(res.end() - 10, res.end());
+    return res;
+}
 
 #ifdef MEX
 void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])

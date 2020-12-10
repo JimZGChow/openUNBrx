@@ -73,13 +73,13 @@ private:
     QVector<QPointF> chanDataBit;
     QVector<float> data100hz;
     float* data100hzGUI;
-    int maxIQ = 100;
+    int maxIQ = 500;
     int outChNum = 0;
     int div = 1;
 
     SinCosGenerator* sinG;
 #ifdef FFTW3F
-    const int sempNum = 100;
+    const int sempNum = maxIQ;
     fftwf_complex* in;
     fftwf_complex* out;
     fftwf_plan p;

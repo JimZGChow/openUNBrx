@@ -97,6 +97,7 @@ std::vector<uint8_t> getVectorFromArray(uint8_t* array, int size) {
 int getErrors(std::vector<uint8_t> a, std::vector<uint8_t> b) {
     int err = 0;
     for (int i=0; i< std::min(a.size(), b.size()); i++) {
+
         if (a[i] != b[i])
             err++;
     }

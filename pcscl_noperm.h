@@ -37,5 +37,6 @@ std::vector<std::vector<uint8_t>> pcscl_prep(int m, int L, const std::vector<uin
 std::vector<std::vector<uint8_t>> pcscl_prep(int m, int L, const std::vector<float>& data, std::vector<std::vector<float>>* prob, uint8_t* info_bit_pattern);
 std::vector<uint8_t> crc_ok_array(uint32_t polynom, std::vector<std::vector<uint8_t>> a);
 uint8_t crc_ok(uint32_t polynom, std::vector<uint8_t> a);
+std::vector<uint8_t> remove_crc(std::vector<uint8_t> a);
 
 #endif // PCSCL_NOPERM_H

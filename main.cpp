@@ -15,6 +15,7 @@
 #include <time.h>
 #include <csignal>
 
+//#define FILE
 
 int g_exitRecvThread = 0;
 
@@ -40,38 +41,10 @@ void recvData(SoapySDR::Device* dev, SoapySDR::Stream* stream, std::vector<char>
 
     struct timespec begin, end;
     //UDP_Reciever udp(recvBuf->size());
-    //udp.readData((uint8_t*)Buffs[0]);
-    std::fstream f("/home/pi/1M_openUNB.complex");
-
-    float k=0;
-
-    int seek = 1000000 * 2 * sizeof(float) + 4000000;
-    int step = 1000000 * 2 * sizeof(float) * 1;
-    char* data = new char[step];
-
     while(!g_exitRecvThread){
         int n_stream_read = dev->readStream(stream, Buffs, numElems, flags, timeNs, maxTimeout);
         //int n_stream_read = udp.readData((uint8_t*)Buffs[0]);
-//        int n_stream_read;
 
-//        f.seekg(seek, std::ios_base::beg);
-//        std::cout << " pos " << f.tellg() << std::endl;
-//        f.read(data, step);
-//        dem.addIQ(data, step / (sizeof(float) * 2));
-//        usleep(1000000);
-//        //seek += step;
-//        if (seek > 38000000 - step)
-//            seek = 0;
-//        continue;
-//        float* f = (float*)Buffs[0];
-//        for (int i=0; i<n_stream_read; i++) {
-//            f[i*2] = k;
-//            f[i*2 + 1] = k;
-
-//            k += 0.001;
-//            if (k > 1)
-//                k = 0;
-//        }
 
         if(n_stream_read < 0)
             std::cout << " Soapy read failed with code: " << n_stream_read << std::endl;
@@ -95,6 +68,7 @@ int main(int argc, char *argv[]) {
 
     std::signal(SIGINT, ctrlC);
 
+#ifndef FILE
     double freq = 868000000.0;
 
     if (argc == 4)
@@ -214,6 +188,47 @@ int main(int argc, char *argv[]) {
             }
         }
     }
+#else
+    Demodulator dem(1000000);
+
+    std::fstream f("/home/pi/1M_openUNB_96.complex");
+
+    float k=0;
+
+    int seek = 1000000 * 2 * sizeof(float) + 4000000;
+    int step = 1000000 * 2 * sizeof(float) * 1;
+    char* data = new char[step];
+
+    const double mean = 0.0;
+    double stddev = 0.5;
+    std::default_random_engine generator;
+    std::normal_distribution<float> dist(mean, 1.0);
+
+    while(!g_exitRecvThread){
+        int n_stream_read;
+
+        f.seekg(seek, std::ios_base::beg);
+        //std::cout << " pos " << f.tellg() << std::endl;
+        f.read(data, step);
+
+        float* dataf = (float*)data;
+        for (int i=0; i<step / (sizeof(float)); i++) {
+            dataf[i] += dist(generator) * stddev;
+        }
+
+        dem.addIQ(data, step / (sizeof(float) * 2));
+        //usleep(1000000);
+        seek += step;
+        if (seek > 60000000 - step) {
+            seek = 20000000;
+
+            stddev += 0.01;
+            if (stddev > 1.2)
+                stddev = 0.01;
+            std::cout << "stddev: " << stddev << std::endl;
+        }
+    }
+#endif
 
     //return a.exec();
     return 0;
