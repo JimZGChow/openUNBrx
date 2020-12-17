@@ -327,8 +327,8 @@ void MainWindow::update100HzData() {
     chanDataCorr.clear();
     chanDataBit.clear();
 
-    memcpy(in, dataF, sempNum * sizeof(fftwf_complex));
-    fftwf_execute(p);
+    //memcpy(in, dataF, sempNum * sizeof(fftwf_complex));
+    //fftwf_execute(p);
 
     float phase1, phase2;
     //sinG->reset();
@@ -343,9 +343,9 @@ void MainWindow::update100HzData() {
 
 
 
-        chanDataI.push_back(QPointF(i, 10*log10f(out[i][0]*out[i][0] + out[i][1]*out[i][1])));
+        //chanDataI.push_back(QPointF(i, 10*log10f(out[i][0]*out[i][0] + out[i][1]*out[i][1])));
 
-        //chanDataI.push_back(QPointF(maxIQ - 1 - i, dataF[i*2] * sI));
+        chanDataI.push_back(QPointF(maxIQ - 1 - i, dataF[i*2] * sI));
         chanDataQ.push_back(QPointF(maxIQ - 1 - i, dataF[i*2 + 1] * sQ));
         chanDataEn.push_back(QPointF(maxIQ - 1 - i, 10*log10f(dataF[i*2] * sI * dataF[i*2] * sI + dataF[i*2+1] * sQ * dataF[i*2+1] * sQ)));
 

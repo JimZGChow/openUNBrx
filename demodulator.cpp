@@ -78,7 +78,7 @@ void Demodulator::addIQ(void* data, int size) {
 
         for (int i=0; i<numOfChannels; i++) {
             //std::cout << "ch = " << i << std::endl;
-            if (i == 29)
+            //if (i == 29)
                 pr += findPreambles(i);
             channeslData[i].erase(channeslData[i].begin(), channeslData[i].end() - 32);
         }
@@ -221,9 +221,30 @@ int Demodulator::findPreambles(int ch) {
             }
             std::cout << " qAvg: " << qAvg/iAvg << std::endl;
 #endif
+            /*
             PreamblePoint* pp = new PreamblePoint;
             pp->channel = ch;
             pp->inv = err1 <= MAX_ERRORS ? 0 : PreamblePoint::invIQ;
+            pp->preableErrors = std::min(err1, err2);
+            pp->noise = noise;
+            pp->pos = x;
+            pp->data.insert(pp->data.begin(), channeslData[ch].begin() + x - 32,channeslData[ch].begin() + x - 32 + std::min(channeslData[ch].size() - x + 32, (size_t)(DATA_LEN + PREAMBLE_LEN + 1)));
+            PreamblePointWithoutFullData.push_back(pp);
+            ret++;
+            */
+            PreamblePoint* pp1 = new PreamblePoint;
+            pp1->channel = ch;
+            pp1->inv = PreamblePoint::invIQ;
+            pp1->preableErrors = std::min(err1, err2);
+            pp1->noise = noise;
+            pp1->pos = x;
+            pp1->data.insert(pp1->data.begin(), channeslData[ch].begin() + x - 32,channeslData[ch].begin() + x - 32 + std::min(channeslData[ch].size() - x + 32, (size_t)(DATA_LEN + PREAMBLE_LEN + 1)));
+            PreamblePointWithoutFullData.push_back(pp1);
+            ret++;
+
+            PreamblePoint* pp = new PreamblePoint;
+            pp->channel = ch;
+            pp->inv = 0;
             pp->preableErrors = std::min(err1, err2);
             pp->noise = noise;
             pp->pos = x;

@@ -73,7 +73,7 @@ private:
     QVector<QPointF> chanDataBit;
     QVector<float> data100hz;
     float* data100hzGUI;
-    int maxIQ = 500;
+    int maxIQ = 100;
     int outChNum = 0;
     int div = 1;
 
