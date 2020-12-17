@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #define QT_CHARTS
+//#define USE_WINDOW
 
 #include <QMainWindow>
 #include <QFile>

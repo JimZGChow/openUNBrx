@@ -57,7 +57,7 @@ void recvData(SoapySDR::Device* dev, SoapySDR::Stream* stream, std::vector<char>
 
             double time = ((end.tv_sec - begin.tv_sec) + (end.tv_nsec - begin.tv_nsec)/1e9) * 1e6;
 
-            //std::cout << "Processing time: " << time << " ns (" << time / maxTimeout * 100 << " %) " << std::endl;
+            std::cout << "Processing time: " << time << " ns (" << time / maxTimeout * 100 << " %) " << std::endl;
         }
     }
 

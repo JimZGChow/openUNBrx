@@ -14,7 +14,9 @@ Demodulator::Demodulator(int inSempleRate) {
     i1 = new float[numOfChannels];
     q1 = new float[numOfChannels];
 
+#ifdef USE_WINDOW
     guiTh = new std::thread(&Demodulator::guiThread, this, 0, nullptr);
+#endif
     //speedTh = new std::thread(&Demodulator::freqCounter, this);
 
     scg.setFreq(0);
@@ -36,21 +38,21 @@ float a = 0.0;
 void Demodulator::addIQ(void* data, int size) {
     //printf("addIQ %d\n", size);
     float* dataPtr = (float*)data;
+#ifdef USE_WINDOW
     if (window)
         scg.setFreq(window->getSelectedFreq());
+#endif
 
     wideSpectorData.insert(wideSpectorData.end(), dataPtr, dataPtr + size*2);
     wideSpectorDataSamples += size;
 
-    /*
+/*
     for (int i=0; i<wideSpectorData.size(); i += 2) {
         wideSpectorData[i] *= 2 * scg.nextCos();
-        wideSpectorData[i] += dist(generator);
         wideSpectorData[i + 1] *= 2 * scg.nextSin();
-        wideSpectorData[i + 1] += dist(generator);
         scg.nextStep();
-    }*/
-
+    }
+*/
     //if (wideSpectorData.size() > 2*1000000);
     decimation();
     channelize();
@@ -59,9 +61,11 @@ void Demodulator::addIQ(void* data, int size) {
     memcpy(tmp, fftw_out + numOfChannels/2, sizeof(tmp) / 2);
     memcpy(tmp + sizeof(tmp) / 2, fftw_out, sizeof(tmp) / 2);
 
+#ifdef USE_WINDOW
     if (window) {
         window->push1MHzData(fftw_out, numOfChannels);
     }
+#endif
 
     if (channeslData[0].size() > 100) {
         for (int i=0; i<PreamblePointWithoutFullData.size(); i++) {
@@ -153,9 +157,11 @@ void Demodulator::channelize() {
 
         channeslDataSamples++;
 
+#ifdef USE_WINDOW
         if (window) {
             window->push100HzData(fftw_out[window->getSelectedChannel()]);
         }
+#endif
 
         for (int ch=0; ch < numOfChannels; ch++) {
             std::complex<float> c(fftw_out[ch][0], fftw_out[ch][1]);
@@ -256,6 +262,7 @@ int Demodulator::findPreambles(int ch) {
     return ret;
 }
 
+#ifdef USE_WINDOW
 void Demodulator::guiThread(int argc, char *argv[]) {
     QApplication a(argc, argv);
     window = new MainWindow();
@@ -264,6 +271,7 @@ void Demodulator::guiThread(int argc, char *argv[]) {
 
     exit(0);
 }
+#endif
 
 void Demodulator::freqCounter() {
     const int m = 7;

@@ -194,7 +194,8 @@ void Decoder::run() {
                 file /* << std::asctime(std::localtime(&result))*/ << "\t\t" << rssi - 10*log10f(pp->noise) << "\t\t" << getStringHexFromVector(remove_crc(dec[i > crc_err.size() ? 0 : i])) << "\t\t" << ber << "\t\t" << ber << "\t\t" << b << std::endl;
                 file.close();
             }
-            std::cout << " SNR: " << rssi - 10*log10f(pp->noise) << ", Er: " << err << ", ber: " << ber << ", ch: " << pp->channel << ", b: " << b << std::endl;
+            if (b)
+                std::cout << " SNR: " << rssi - 10*log10f(pp->noise) << ", Er: " << err << ", ber: " << ber << ", ch: " << pp->channel << ", b: " << b << std::endl;
 
 //#endif
             delete pp;

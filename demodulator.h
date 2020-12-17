@@ -55,8 +55,10 @@ private:
     fftwf_complex* fftw_out;
     fftwf_plan fftw_p;
 
+#ifdef USE_WINDOW
     MainWindow* window = nullptr;
     std::thread* guiTh;
+#endif
     std::thread* speedTh;
 
     float* i1;
