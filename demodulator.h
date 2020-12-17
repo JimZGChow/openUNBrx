@@ -33,7 +33,7 @@
 #define CHANNELS            (SAMPLE_RATE / CHANNEL_SAMPLE_RATE * X2)
 
 #define DATA_LEN            256
-#define MAX_ERRORS          1
+#define MAX_ERRORS          3
 #define PREAMBLE_LEN        32
 
 class Demodulator

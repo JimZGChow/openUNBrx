@@ -93,11 +93,8 @@ void Demodulator::addIQ(void* data, int size) {
     }
 }
 
-float dds = 0;
-
 void Demodulator::decimation() {
     fftwf_complex* dataIn = (fftwf_complex*)wideSpectorData.data();
-    dds += 1;
     int i;
 
     for (i=0; i < (int)(wideSpectorData.size()/2) - BL_1M_to_125K - decimationK; i += decimationK) {
@@ -112,7 +109,7 @@ void Demodulator::decimation() {
         decimatedData.push_back(iC);
         decimatedData.push_back(qC);
 
-        decimatedDataSamples++;
+        //decimatedDataSamples++;
     }
 
     if (i !=0) {
@@ -156,7 +153,7 @@ void Demodulator::channelize() {
 
         fftwf_execute(fftw_p);
 
-        channeslDataSamples++;
+        //channeslDataSamples++;
 
 #ifdef USE_WINDOW
         if (window) {
@@ -182,7 +179,7 @@ void Demodulator::channelize() {
 
 int Demodulator::bitDif(uint32_t a, uint32_t b) {
     int ret = 0;
-    uint64_t c = a ^ b;
+    uint32_t c = a ^ b;
     for (int i=0; i<32; i++) {
         if ((c >> i) & 1)
             ret++;

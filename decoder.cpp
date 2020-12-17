@@ -73,6 +73,14 @@ void Decoder::pushPreablePoint(PreamblePoint* pp) {
 
 void Decoder::run() {
     std::time_t result = std::time(nullptr);
+    struct timespec begin, end;
+
+    std::vector<float> tmp(256);
+    std::vector<uint8_t> tmpb(256);
+    std::vector<uint8_t> tmpexp_enc = getVectorFromStringHex("000000000000000007EA4AFD97B6DAA1234E0E39BD75ACC1A4F60755EED58E4A");
+    std::vector<uint8_t> tmpexp = getVectorFromStringHex("4BF2EC8D3838EF5AF49EC177");//{0,1,1,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,1,0,1,0,0,0,0,0,0,0,1,0,0,0,1,0,1,0,1,0,0,0,0,0,0,0,1,0,0,1,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,1,1,1,1,1,1,0,0,1,0,0,1,1,1,1,1,1,1,0,0,0,0,1,1,1,0,1,0,0,0,0,0,0,0,1,1,0,0,0,0,0,1,1,0};
+
+
     while (isRun) {
         if (preablePointVector.size() > 0) {
             mut.lock();
@@ -80,18 +88,7 @@ void Decoder::run() {
             preablePointVector.pop();
             mut.unlock();
 
-            /*
-            std::string fname = "data" + std::to_string(std::localtime(&result)->tm_gmtoff) + "_" + std::to_string(pp->channel) + ".complex";
-            std::fstream file1(fname, std::ios_base::out | std::ios_base::binary);
-
-            if (file1.is_open()) {
-                file1.write((char*)pp->data.data(), pp->data.size() * sizeof(float) * 2);
-                file1.close();
-            }
-            else {
-                std::cout << "File error: " << std::strerror(errno) << std::endl;
-            }
-            */
+            clock_gettime(CLOCK_REALTIME, &begin);
 
             std::vector<float> data;
             for (int i=1; i< pp->data.size(); i++) {
@@ -111,10 +108,7 @@ void Decoder::run() {
                 }
 
             }
-            std::vector<float> tmp(256);
-            std::vector<uint8_t> tmpb(256);
-            std::vector<uint8_t> tmpexp_enc = getVectorFromStringHex("000000000000000007EA4AFD97B6DAA1234E0E39BD75ACC1A4F60755EED58E4A");
-            std::vector<uint8_t> tmpexp = getVectorFromStringHex("4BF2EC8D3838EF5AF49EC177");//{0,1,1,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,1,0,1,0,0,0,0,0,0,0,1,0,0,0,1,0,1,0,1,0,0,0,0,0,0,0,1,0,0,1,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,1,1,1,1,1,1,0,0,1,0,0,1,1,1,1,1,1,1,0,0,0,0,1,1,1,0,1,0,0,0,0,0,0,0,1,1,0,0,0,0,0,1,1,0};
+
             for (int i=0; i<256; i+=8) {
                 for (int j=0; j<8; j++) {
                     tmp[i + j] = data[255 - (i+(7-j)) + 32];
@@ -165,16 +159,6 @@ void Decoder::run() {
                         maxProbe = prob[i][prob.size()-1];
                         maxProbeIndex = i;
                     }
-
-                    /*
-                    std::vector<uint8_t> dec_data = remove_crc(dec[i]);
-                    std::cout << "Decoded data:  " << getStringHexFromVector(dec_data) << std::endl;
-                    std::cout << "Expected data: " << getStringHexFromVector(tmpexp) << std::endl;
-                    //std::cout << " SNR: " << rssi - 10*log10f(pp->noise) << ", Er: " << getErrors(tmpb, tmpexp_enc) << ", ber: " << ber << ", ch: " << pp->channel << std::endl;
-                    if (dec_data == tmpexp)
-                        b = true;
-                    //}
-                    */
                 }
             }
 
@@ -194,8 +178,12 @@ void Decoder::run() {
                 file /* << std::asctime(std::localtime(&result))*/ << "\t\t" << rssi - 10*log10f(pp->noise) << "\t\t" << getStringHexFromVector(remove_crc(dec[i > crc_err.size() ? 0 : i])) << "\t\t" << ber << "\t\t" << ber << "\t\t" << b << std::endl;
                 file.close();
             }
+
+            clock_gettime(CLOCK_REALTIME, &end);
+            double time = ((end.tv_sec - begin.tv_sec) + (end.tv_nsec - begin.tv_nsec)/1e9) * 1e3;
+
             if (b)
-                std::cout << " SNR: " << rssi - 10*log10f(pp->noise) << ", Er: " << err << ", ber: " << ber << ", ch: " << pp->channel << ", b: " << b << std::endl;
+                std::cout << " SNR: " << rssi - 10*log10f(pp->noise) << ", Er: " << err << ", ber: " << ber << ", ch: " << pp->channel << ", b: " << b << " Time: " << time << " ms" << std::endl;
 
 //#endif
             delete pp;
