@@ -57,11 +57,12 @@ void Demodulator::addIQ(void* data, int size) {
     decimation();
     channelize();
 
+#ifdef USE_WINDOW
     char tmp[numOfChannels * sizeof(float) * 2];
     memcpy(tmp, fftw_out + numOfChannels/2, sizeof(tmp) / 2);
     memcpy(tmp + sizeof(tmp) / 2, fftw_out, sizeof(tmp) / 2);
 
-#ifdef USE_WINDOW
+
     if (window) {
         window->push1MHzData(fftw_out, numOfChannels);
     }
@@ -182,7 +183,7 @@ void Demodulator::channelize() {
 int Demodulator::bitDif(uint32_t a, uint32_t b) {
     int ret = 0;
     uint64_t c = a ^ b;
-    for (int i=0; i<64; i++) {
+    for (int i=0; i<32; i++) {
         if ((c >> i) & 1)
             ret++;
     }
