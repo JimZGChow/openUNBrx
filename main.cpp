@@ -1,7 +1,6 @@
 #include "SoapyEnum.h"
 #include "SDRDevInfo.h"
 #include "demodulator.h"
-#include "pcscl_noperm.h"
 #include "udp_reciever.h"
 #include "preamblepoint.h"
 
@@ -37,7 +36,7 @@ void recvData(SoapySDR::Device* dev, SoapySDR::Stream* stream, std::vector<char>
     long maxTimeout = numElems / dev->getSampleRate(SOAPY_SDR_RX, 0) * 1000 * 1000;
 
     Buffs[0] = (void*)recvBuf->data();
-    Demodulator dem(dev->getSampleRate(SOAPY_SDR_RX, 0));
+    OpenUNBDemodulator dem(dev->getSampleRate(SOAPY_SDR_RX, 0));
 
     struct timespec begin, end;
     //UDP_Reciever udp(recvBuf->size());

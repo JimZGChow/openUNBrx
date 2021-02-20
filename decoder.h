@@ -9,21 +9,25 @@
 #include <fstream>
 #include <cstring>
 
-#include "preamblepoint.h"
-#include "pcscl_noperm.h"
-#include "VectorHelper.h"
+#include <OpenUNBCodecHL.h>
 
-class Decoder
+#include "preamblepoint.h"
+
+class OpenUNBDecoder
 {
 public:
-    Decoder();
+    OpenUNBDecoder(int symLen);
 
     void pushPreablePoint(PreamblePoint* pp);
     int size();
+    void setCallback(void (*clb_f)(uint8_t* data, size_t size));
 private:
     std::mutex mut;
     std::queue<PreamblePoint*> preablePointVector;
     std::thread* th;
+    int symlen;
+
+    void (*clb_f)(uint8_t* data, size_t size) = nullptr;
 
     bool isRun;
 

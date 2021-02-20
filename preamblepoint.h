@@ -8,6 +8,7 @@ class PreamblePoint
 {
 public:
     PreamblePoint();
+    PreamblePoint(PreamblePoint*);
 
     int preableErrors;
     int channel;
@@ -16,6 +17,7 @@ public:
     int added = 0;
     float noise;
     int pos;
+    unsigned int  batch;
 
     enum {
         invBits = 1,
