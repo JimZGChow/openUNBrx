@@ -77,8 +77,8 @@ void OpenUNBDemodulator::addIQ(void* data, int size) {
             channeslData[i].erase(channeslData[i].begin(), channeslData[i].end() - 32);
         }
 
-        //if (pr)
-        //    std::cout << "Preambles: " << pr << "(" << dec->size() << ")" << std::endl;
+        if (pr)
+            std::cout << "Preambles: " << pr << "(" << dec->size() << ")" << std::endl;
     }
 }
 

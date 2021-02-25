@@ -26,6 +26,7 @@ private:
     std::queue<PreamblePoint*> preablePointVector;
     std::thread* th;
     int symlen;
+    std::vector<uint8_t> bits_to_byties(const std::vector<uint8_t>& in);
 
     void (*clb_f)(uint8_t* data, size_t size) = nullptr;
 

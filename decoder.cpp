@@ -86,12 +86,12 @@ void OpenUNBDecoder::run() {
             //std::vector<uint8_t> tmpexp_enc = getVectorFromStringHex("6F7A15976F7A15976F7A15976F7A15976F7A15976F7A15976F7A15976F7A1597");
             //std::vector<uint8_t> tmpexp_enc = getVectorFromStringHex("000000000000000007EA4AFD97B6DAA1234E0E39BD75ACC1A4F60755EED58E4A");
             //std::vector<uint8_t> tmpexp = getVectorFromStringHex("4BF2EC8D3838EF5AF49EC177");//{0,1,1,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,1,0,1,0,0,0,0,0,0,0,1,0,0,0,1,0,1,0,1,0,0,0,0,0,0,0,1,0,0,1,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,1,1,1,1,1,1,0,0,1,0,0,1,1,1,1,1,1,1,0,0,0,0,1,1,1,0,1,0,0,0,0,0,0,0,1,1,0,0,0,0,0,1,1,0};
-            for (int i=0; i<256; i+=8) {
-                for (int j=0; j<8; j++) {
-                    tmp[i + j] = data[255 - (i+(7-j)) + 32] / max;
-                    tmpb[i + j] = data[255 - (i+(7-j)) + 32] > 0 ? 0:1;
-                }
+
+            for (int i=0; i<256; i++) {
+                tmp[i] = data[i + 32];
+                tmpb[i] = data[i + 32] > 0 ? 0:1;
             }
+
             float qAvg = 0;
             float iAvg = 0;
             float rssi = 0;
@@ -105,22 +105,40 @@ void OpenUNBDecoder::run() {
 
             //std::cout << pp->channel << ") Errors: " << getErrors(tmpb, tmpexp_enc) << std::endl;
 #ifdef DEC_LOG
-            if (pp->channel == 20) {
+            if (pp->channel == 20 || true) {
             std::cout << std::endl << "PP: " <<(int)pp->inv << "    Ch: " << pp->channel << std::endl;
             std::cout << "Recieved data: \n" << getStringBinFromVector(tmpb) << std::endl;
-            std::cout << "Expected data: \n" << getStringBinFromVector(tmpexp_enc) << std::endl;
-            std::cout << "Exp == Rec: " << (int) (tmpb == tmpexp_enc) << std::endl;
-            std::cout << "Errors: " << getErrors(tmpb, tmpexp_enc) << std::endl;
-            std::cout << "iqAvgDiv: " << std::max(qAvg, iAvg) / std::min(qAvg, iAvg) << std::endl;
+            //std::cout << "Expected data: \n" << getStringBinFromVector(tmpexp_enc) << std::endl;
+            //std::cout << "Exp == Rec: " << (int) (tmpb == tmpexp_enc) << std::endl;
+            //std::cout << "Errors: " << getErrors(tmpb, tmpexp_enc) << std::endl;
+            //std::cout << "iqAvgDiv: " << std::max(qAvg, iAvg) / std::min(qAvg, iAvg) << std::endl;
             std::cout << "x: " << pp->pos << std::endl;
             std::cout << "batch: " << pp->batch << std::endl;
             }
 #endif
 
-            auto res = decode_96(tmp);
+            auto res = decode_64(tmp);
 
             if (res.size() > 0) {
                 std::cout << " OpenUNB data! SNR: " << rssi - 10*log10f(pp->noise) << ", RSSI: " << rssi << ", NOISE: " << 10*log10f(pp->noise) << ", ch: " << pp->channel << ", iqAvgDiv: " << 20 * log10f(iAvg/qAvg) << std::endl;
+                //std::cout << " Data: { " << getStringHexFromVector(res) << " }" << std::endl;
+
+                std::vector<uint8_t> dataHex = bits_to_byties(res);
+
+                std::cout << " Data: { addr: " << std::hex;
+                for (int i=0; i<3; i++)
+                    std::cout << (int)dataHex[i];
+                std::cout << std::endl;
+
+                std::cout << "         data: " << std::hex;
+                for (int i=3; i<5; i++)
+                    std::cout << (int)dataHex[i];
+                std::cout << std::endl;
+
+                std::cout << "         CRC: " << std::hex;
+                for (int i=5; i<8; i++)
+                    std::cout << (int)dataHex[i];
+                std::cout << " }" << std::dec <<std::endl;
             }
 
 //#endif
@@ -130,6 +148,20 @@ void OpenUNBDecoder::run() {
             usleep(100);
         }
     }
+}
+
+std::vector<uint8_t> OpenUNBDecoder::bits_to_byties(const std::vector<uint8_t>& in) {
+    std::vector<uint8_t> res(in.size()/8);
+
+    for (int i=0; i < res.size(); i++) {
+        res[i] = 0;
+    }
+
+    for (int i=0; i < in.size(); i++) {
+        res[i / 8] |= in[i] << (i % 8);
+    }
+
+    return res;
 }
 
 int OpenUNBDecoder::size() {
