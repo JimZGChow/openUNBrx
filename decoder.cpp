@@ -124,21 +124,34 @@ void OpenUNBDecoder::run() {
                 //std::cout << " Data: { " << getStringHexFromVector(res) << " }" << std::endl;
 
                 std::vector<uint8_t> dataHex = bits_to_byties(res);
+                uint32_t addr = 0;
+                uint16_t payload = 0;
+                uint32_t crcIn = 0;
+                memcpy(&addr, dataHex.data(), 3);
+                memcpy(&payload, dataHex.data() + 3, 2);
+                memcpy(&crcIn, dataHex.data() + 5, 3);
 
-                std::cout << " Data: { addr: " << std::hex;
-                for (int i=0; i<3; i++)
-                    std::cout << (int)dataHex[i];
-                std::cout << std::endl;
+                char txOut[128];
+                sprintf(txOut, "Data: { addr: %.6X,\t payload: %.4X,\t crc: %.6X}", addr, payload, crcIn);
+                std::cout << "     " << txOut << std::endl;
 
-                std::cout << "         data: " << std::hex;
-                for (int i=3; i<5; i++)
-                    std::cout << (int)dataHex[i];
-                std::cout << std::endl;
+                uint32_t crcCalc = crc24(dataHex.data(), 5);
 
-                std::cout << "         CRC: " << std::hex;
-                for (int i=5; i<8; i++)
-                    std::cout << (int)dataHex[i];
-                std::cout << " }" << std::dec <<std::endl;
+                if (crcCalc == crcIn) {
+                    std::cout << "         CRC OK" <<std::endl;
+
+                    std::localtime(&result);
+                    std::string fname = "msg.txt";
+                    std::fstream file1(fname, std::ios_base::out | std::ios_base::app);
+
+                    if (file1.is_open()) {
+                        file1 << std::asctime(std::localtime(&result)) << " \t" << txOut << std::endl;
+                        file1.close();
+                    }
+                    else {
+                        std::cout << "File error: " << std::strerror(errno) << std::endl;
+                    }
+                }
             }
 
 //#endif

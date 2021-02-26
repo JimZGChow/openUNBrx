@@ -12,6 +12,7 @@
 #include <OpenUNBCodecHL.h>
 
 #include "preamblepoint.h"
+#include "crc24.h"
 
 class OpenUNBDecoder
 {
