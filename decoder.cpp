@@ -1,7 +1,7 @@
 #include "decoder.h"
 
 OpenUNBDecoder::OpenUNBDecoder(int symLen) {
-    initOpenUNBCodec();
+    //initOpenUNBCodec();
 
     isRun = true;
 
