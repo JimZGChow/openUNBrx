@@ -7,6 +7,8 @@ OpenUNBDecoder::OpenUNBDecoder(int symLen) {
 
     symlen = symLen;
 
+    initOpenUNBCodec();
+
     th = new std::thread(&OpenUNBDecoder::run, this);
 
 }
