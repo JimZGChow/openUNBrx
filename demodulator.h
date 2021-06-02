@@ -11,31 +11,45 @@
 #include <unistd.h>
 #include <iterator>
 #include <random>
+#include <QApplication>
+#include <volk/volk.h>
+
+//#define QT_THREAD
+
+#ifdef QT_THREAD
+    #include <QThread>
+#endif
 
 //#include "fdacoefs.h"
 #include "fdacoefs_125K_to_100.h"
 #include "fdacoefs_1M_to_125K.h"
 #include "preamblepoint.h"
 #include "decoder.h"
-
-#define X2_CHANNELS         1
-#define CHANNEL_SAMPLE_RATE 100
-#define SAMPLE_RATE         125000
-#define SYM_RATE            100
-
-#define SYM_LEN             (CHANNEL_SAMPLE_RATE/SYM_RATE)
-#define X2                  (X2_CHANNELS * 2)
-#define CHANNELS            (SAMPLE_RATE / CHANNEL_SAMPLE_RATE * X2)
+#include "mainwindow.h"
+#include "GNU_UDP_client.hpp"
 
 #define DATA_LEN            256
-#define MAX_ERRORS          2
+#define MAX_ERRORS          1
 #define PREAMBLE_LEN        32
-#define MAX_NOISE_NUM       100
+#define MAX_NOISE_NUM       1000
+#define SUPER_X             2
 
+#define TABLES_NUM      50
+#define FFT_SIZE        (125000 / 100)
+
+#ifdef QT_THREAD
+class OpenUNBDemodulator : public QThread
+#else
 class OpenUNBDemodulator
+#endif
 {
+
+#ifdef QT_THREAD
+    Q_OBJECT
+#endif
+
 public:
-    OpenUNBDemodulator(int inSempleRate);
+    OpenUNBDemodulator(int inSempleRate, int xChan = 2, int id = 0);
     ~OpenUNBDemodulator();
 
     void addIQ(void* data, int sizeInSamples);
@@ -43,6 +57,25 @@ public:
 private:
     int numOfChannels;
     int decimationK;
+    int id;
+
+#ifdef QT_THREAD
+    void run();
+#endif
+    MainWindow* window = nullptr;
+    std::thread* guiTh;
+    udp_client* udp;
+    udp_client* udp2;
+
+    void guiThread(int argc, char *argv[]);
+
+    unsigned int X_CHANNELS = 4;
+    unsigned int CHANNEL_SAMPLE_RATE = 100;
+    unsigned int SAMPLE_RATE = 125000;
+    unsigned int SYM_RATE = 100;
+
+    unsigned int SYM_LEN = (CHANNEL_SAMPLE_RATE/SYM_RATE);
+    unsigned int CHANNELS = (SAMPLE_RATE / CHANNEL_SAMPLE_RATE * X_CHANNELS);
 
     std::vector<float> wideSpectorData;
     std::vector<std::complex<float>>* channeslData;
@@ -57,14 +90,14 @@ private:
 
     float* i1;
     float* q1;
-    std::complex<float> iq1[CHANNELS];
-    std::complex<float> iq2[CHANNELS];
+    std::complex<float>* iq1;
+    std::complex<float>* iq2;
 
-    float i2[CHANNELS], q2[CHANNELS];
-    float corr1[CHANNELS], corr2[CHANNELS];
+    float* i2, *q2;
+    float* corr1, *corr2;
 
-    uint32_t corr[CHANNELS];
-    uint32_t inv_corr[CHANNELS];
+    uint32_t* corr;
+    uint32_t* inv_corr;
 
     std::vector<PreamblePoint*> PreamblePointWithoutFullData;
     std::vector<PreamblePoint*> PreamblePointFullData;
@@ -72,7 +105,13 @@ private:
     int wideSpectorDataSamples = 0;
     int decimatedDataSamples = 0;
     int channeslDataSamples = 0;
-    bool invers = true;
+    bool invers = false;
+    int shift = 0;
+    int decimationPoint = 0;
+
+#ifdef QT_THREAD
+    bool isRunning = false;
+#endif
 
     OpenUNBDecoder* dec;
 
@@ -88,10 +127,17 @@ private:
     unsigned int noiseNum = 0;
     unsigned int totalSamples = 0;
     unsigned int totalBatches = 0;
-    float noise[CHANNELS][MAX_NOISE_NUM];
+    float** noise;
     float avg(float*, size_t);
 
     std::string uint32ToSring(uint32_t);
+
+    const static int udpSemplSize = 100;
+    fftwf_complex udpData[udpSemplSize];
+    int it = 0;
+
+    float** filterBank;
+    int supX = 0;
 };
 
 #endif // DEMODULATOR_H

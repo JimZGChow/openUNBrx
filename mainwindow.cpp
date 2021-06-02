@@ -37,7 +37,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     qChart1M->addSeries(qLineSeries1M);
     QValueAxis *axisX = new QValueAxis;
-    axisX->setRange(-CHAN_NUM/2, CHAN_NUM/2);
+    axisX->setRange(-CHAN_NUM/5, CHAN_NUM/5);
     axisX->setLabelFormat("%g");
     axisX->setTitleText("Freq");
     QValueAxis *axisY = new QValueAxis;
@@ -305,8 +305,8 @@ void MainWindow::push1MHzData(fftwf_complex *data_in, int size) {
         }
     }
 
-    if ( max.y() > -70)
-        ui->textBrowser_log->append("Signal on " + QString::number(max.x()) + " ch");
+    //if ( max.y() > -70)
+    //    ui->textBrowser_log->append("Signal on " + QString::number(max.x()) + " ch");
 
 #ifdef QT_CHARTS
     qLineSeries1M->replace(m_buffer);

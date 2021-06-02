@@ -24,7 +24,7 @@
 #endif
 
 #define RECIEVE_ALL_DATA    0
-#define CHAN_NUM    (1250*2)
+#define CHAN_NUM    (1250*4)
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }

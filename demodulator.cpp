@@ -1,15 +1,46 @@
 #include "demodulator.h"
 
-OpenUNBDemodulator::OpenUNBDemodulator(int inSempleRate) {
-    numOfChannels = SAMPLE_RATE / CHANNEL_SAMPLE_RATE * X2;
+//#define DUMP_TO_FILE
+
+
+OpenUNBDemodulator::OpenUNBDemodulator(int inSempleRate, int xChan, int _id) {
+    X_CHANNELS = xChan * SUPER_X;
+    CHANNELS = (SAMPLE_RATE / CHANNEL_SAMPLE_RATE * X_CHANNELS);
+    numOfChannels = CHANNELS;
     decimationK = inSempleRate / SAMPLE_RATE;
 
     std::cout << "Demodulator init. Num of channels: " << numOfChannels << ". decimationK = " << decimationK << std::endl;
 
     channeslData = new std::vector<std::complex<float>>[numOfChannels];
-    fftw_in = (fftwf_complex*) fftwf_malloc (numOfChannels * sizeof(fftwf_complex));
-    fftw_out = (fftwf_complex*) fftwf_malloc (numOfChannels * sizeof(fftwf_complex));
-    fftw_p = fftwf_plan_dft_1d(numOfChannels, fftw_in, fftw_out, FFTW_FORWARD, FFTW_ESTIMATE);
+    fftw_in = (fftwf_complex*) fftwf_malloc (numOfChannels / SUPER_X * sizeof(fftwf_complex));
+    fftw_out = (fftwf_complex*) fftwf_malloc (numOfChannels / SUPER_X * sizeof(fftwf_complex));
+    fftw_p = fftwf_plan_dft_1d(numOfChannels / SUPER_X, fftw_in, fftw_out, FFTW_FORWARD, FFTW_ESTIMATE);
+
+    iq1 = new std::complex<float>[CHANNELS];
+    iq2 = new std::complex<float>[CHANNELS];
+
+    i2 = new float[CHANNELS];
+    q2 = new float[CHANNELS];
+    corr1 = new float[CHANNELS];
+    corr2 = new float[CHANNELS];
+
+    corr = new uint32_t[CHANNELS];
+    inv_corr = new uint32_t[CHANNELS];
+
+    noise = new float*[CHANNELS];
+    for (int i=0; i<CHANNELS; i++) {
+        noise[i] = new float[MAX_NOISE_NUM];
+    }
+
+    filterBank = new float*[CHANNELS / SUPER_X];
+    for (int i=0; i<CHANNELS / SUPER_X; i++) {
+        filterBank[i] = new float[BL_125K_to_100 / CHANNELS * SUPER_X];
+
+        for (int j=0; j<BL_125K_to_100 / CHANNELS * SUPER_X; j++) {
+            filterBank[i][j] = B_125K_to_100[i + j * CHANNELS / SUPER_X];
+        }
+    }
+
 
     //speedTh = new std::thread(&OpenUNBDemodulator::freqCounter, this);
 
@@ -17,6 +48,14 @@ OpenUNBDemodulator::OpenUNBDemodulator(int inSempleRate) {
     q1 = new float[numOfChannels];
 
     dec = new OpenUNBDecoder(SYM_LEN);
+
+    id = _id;
+
+    guiTh = new std::thread(&OpenUNBDemodulator::guiThread, this, 0, nullptr);
+
+    udp = new udp_client("192.168.159.1", 3333);
+    udp2 = new udp_client("192.168.159.1", 3334);
+    //mw = new MainWindow();
 }
 
 OpenUNBDemodulator::~OpenUNBDemodulator() {
@@ -26,6 +65,28 @@ OpenUNBDemodulator::~OpenUNBDemodulator() {
     delete[] i1;
     delete[] q1;
     delete dec;
+
+    delete[] iq1;
+    delete[] iq2;
+
+    delete[] i2;
+    delete[] q2;
+    delete[] corr1;
+    delete[] corr2;
+
+    delete[] corr;
+    delete[] inv_corr;
+
+    for (int i=0; i<CHANNELS; i++) {
+        delete[] noise[i];
+    }
+    delete[] noise;
+
+    for (int i=0; i<CHANNELS; i++) {
+        delete[] filterBank[i];
+    }
+    delete[] filterBank;
+
 }
 
 
@@ -33,16 +94,23 @@ void OpenUNBDemodulator::setCallback(void (*clb_f)(uint8_t* data, size_t size)) 
     dec->setCallback(clb_f);
 }
 
+
+
 void OpenUNBDemodulator::addIQ(void* data, int size) {
 
     float* dataPtr = (float*)data;
 
-    //std::cout << size*2 * sizeof(float) << std::endl;
-
     wideSpectorData.insert(wideSpectorData.end(), dataPtr, dataPtr + size*2);
     wideSpectorDataSamples += size;
 
-    //udp1233->send((char*)dataPtr, sizeof(float)*size*2);
+#ifdef QT_THREAD
+    while(isRunning);
+    isRunning = true;
+    start();
+}
+
+void OpenUNBDemodulator::run() {
+#endif
 
     decimation();
     channelize();
@@ -63,37 +131,38 @@ void OpenUNBDemodulator::addIQ(void* data, int size) {
         int pr = 0;
 
         for (int i=0; i<numOfChannels; i++) {
-            //std::cout << "ch = " << i << std::endl;
-            //if (i >= 145 && i <= 160)
-                pr += findPreambles(i);
+            pr += findPreambles(i);
             if (i == numOfChannels - 1) {
                 totalSamples += channeslData[i].size();
                 totalBatches++;
             }
-            //channeslData[i].erase(channeslData[i].begin(), channeslData[i].end() - 32);
-        }
-
-        for (int i=0; i<numOfChannels; i++) {
-            channeslData[i].erase(channeslData[i].begin(), channeslData[i].end() - 32);
         }
 
         if (pr)
-            std::cout << "Preambles: " << pr << "(" << dec->size() << ")" << std::endl;
+            std::cout << id << ") Preambles: " << pr << "(" << dec->size() << ")" << std::endl;
     }
+#ifdef QT_THREAD
+    isRunning = false;
+
+#endif
 }
 
 void OpenUNBDemodulator::decimation() {
-
     fftwf_complex* dataIn = (fftwf_complex*)wideSpectorData.data();
+    lv_32fc_t dataToFir[BL_1M_to_125K];
+    lv_32fc_t dataFromFir[BL_1M_to_125K];
+
     int i;
 
     for (i=0; i < (int)(wideSpectorData.size()/2) - BL_1M_to_125K - decimationK; i += decimationK) {
         float iC = 0.0;
         float qC = 0.0;
 
+        memcpy(dataToFir, dataIn[i], BL_1M_to_125K * sizeof(lv_32fc_t));
+        volk_32fc_32f_multiply_32fc(dataFromFir, dataToFir, B_1M_to_125K, BL_1M_to_125K);
         for (int j=0; j<BL_1M_to_125K; j++) {
-            iC += dataIn[i + j][0] * B_1M_to_125K[j];
-            qC += dataIn[i + j][1] * B_1M_to_125K[j];
+            iC += dataFromFir[j].real();
+            qC += dataFromFir[j].imag();
         }
 
         decimatedData.push_back(iC);
@@ -103,65 +172,124 @@ void OpenUNBDemodulator::decimation() {
     }
 
     if (i !=0) {
+#ifdef DUMP_TO_FILE
+        char p[256];
+        sprintf(p, "dump/1M.complex", i);
+        FILE* f = fopen(p, "a+");
+        fwrite(wideSpectorData.data(), sizeof(float), i*2, f);
+        fclose(f);
+#endif
         wideSpectorData.erase(wideSpectorData.begin(), wideSpectorData.begin() + i*2);
     }
 
 }
 
+
+
 void OpenUNBDemodulator::channelize() {
-    fftwf_complex* dataIn = (fftwf_complex*)decimatedData.data();
+    lv_32fc_t* dataIn = (lv_32fc_t*)decimatedData.data();
+    lv_32fc_t dataToFir[BL_125K_to_100/numOfChannels];
+    lv_32fc_t dataFromFir[BL_125K_to_100/numOfChannels];
 
     int i;
 
-    for (i=0; i < (int)(decimatedData.size()/2) - BL_125K_to_100 - numOfChannels*BL_125K_to_100/numOfChannels - numOfChannels/2; i += numOfChannels/2) {
-        //udp1233->send((char*)dataIn[i], 1024);
+    int quarter = numOfChannels / X_CHANNELS;
+    int iQuarter = 0;
 
-        for (unsigned int ch=0; ch < numOfChannels; ch++) {
+    for (i=0; i < (int)(decimatedData.size()/2) - 2 * BL_125K_to_100 - numOfChannels/2; i += numOfChannels / X_CHANNELS / SUPER_X) {
+        for (unsigned int ch=0; ch < numOfChannels/SUPER_X; ch++) {
             float iC = 0.0;
             float qC = 0.0;
 
-            for (int j=0; j < BL_125K_to_100/numOfChannels; j++) {
-                iC += dataIn[i + ch + j*numOfChannels][0] * B_125K_to_100[ch + j*numOfChannels];
-                qC += dataIn[i + ch + j*numOfChannels][1] * B_125K_to_100[ch + j*numOfChannels];
+
+            for (int j=0; j < BL_125K_to_100/numOfChannels*SUPER_X; j++) {
+                iC += dataIn[i + ch + j*numOfChannels/SUPER_X].real() * filterBank[ch][j];
+                qC += dataIn[i + ch + j*numOfChannels/SUPER_X].imag() * filterBank[ch][j];
             }
 
-            if (invers) {
-                if (ch < numOfChannels/2) {
-                    fftw_in[ch + numOfChannels/2][0] = iC;
-                    fftw_in[ch + numOfChannels/2][1] = qC;
-                }
-                else {
-                    fftw_in[ch - numOfChannels/2][0] = iC;
-                    fftw_in[ch - numOfChannels/2][1] = qC;
-                }
+            /*
+            for (int j=0; j < BL_125K_to_100/numOfChannels; j++) {
+                dataToFir[j] = dataIn[i + ch + j*numOfChannels];
             }
-            else {
-                fftw_in[ch][0] = iC;
-                fftw_in[ch][1] = qC;
-            }
+
+            volk_32fc_32f_multiply_32fc(dataFromFir, dataToFir, filterBank[ch], BL_125K_to_100/numOfChannels);
+            for (int j=0; j<BL_125K_to_100/numOfChannels; j++) {
+                iC += dataFromFir[j].real();
+                qC += dataFromFir[j].imag();
+            }*/
+
+            int iter = (numOfChannels / X_CHANNELS * shift + ch) % (numOfChannels / SUPER_X);
+            fftw_in[iter][0] = iC;
+            fftw_in[iter][1] = qC;
+
         }
 
         fftwf_execute(fftw_p);
-        //udp1233->send((char*)fftw_in, sizeof(float)*numOfChannels*2);
+        supX = (supX + 1) % SUPER_X;
+
+        int chOut = 0;
+        if (window) {
+            chOut = window->getSelectedChannel();
+        }
+
+        if (supX == chOut % SUPER_X) {
+            udpData[it][0] = fftw_out[chOut/SUPER_X][0];
+            udpData[it][1] = fftw_out[chOut/SUPER_X][1];
+            it++;
+
+            if (it == udpSemplSize) {
+                it = 0;
+                udp->send((char*)udpData, sizeof(udpData));
+            }
+        }
+
+
+
+
+        if (window)
+            window->push1MHzData(fftw_out, numOfChannels);
 
         channeslDataSamples++;
 
-        for (int ch=0; ch < numOfChannels; ch++) {
+#ifdef DUMP_TO_FILE
+        for(int i = 0; i < 20; i++) {
+            if (i % SUPER_X == supX) {
+                char p[256];
+                sprintf(p, "dump/ch%d.complex", i);
+                FILE* f = fopen(p, "a+");
+                fwrite(fftw_out[i / SUPER_X], sizeof(fftwf_complex), 1, f);
+                fclose(f);
+            }
+        }
+#endif
+
+        for (int ch=0; ch < numOfChannels / SUPER_X; ch++) {
             std::complex<float> c(fftw_out[ch][0], fftw_out[ch][1]);
             //noise += fftw_out[ch][0] * fftw_out[ch][0] + fftw_out[ch][1] * fftw_out[ch][1];
             noise[ch][noiseNum] = fftw_out[ch][0] * fftw_out[ch][0] + fftw_out[ch][1] * fftw_out[ch][1];
-            channeslData[ch].push_back(c);
 
+            channeslData[ch * SUPER_X + supX].push_back(c);
         }
-        //noise /= numOfChannels;
         noiseNum = (noiseNum + 1) % MAX_NOISE_NUM;
 
         invers = !invers;
+
+        shift = (shift + 1) % X_CHANNELS;
     }
 
     if (i != 0) {
+#ifdef DUMP_TO_FILE
+        char p[256];
+        sprintf(p, "dump/125K.complex", i);
+        FILE* f = fopen(p, "a+");
+        fwrite(decimatedData.data(), sizeof(float), i*2, f);
+        fclose(f);
+#endif
+
+        udp2->send((char*)decimatedData.data(), std::min(32*1024, i*2 * 4));
         decimatedData.erase(decimatedData.begin(), decimatedData.begin() + i*2);
     }
+
 }
 
 int OpenUNBDemodulator::bitDif(uint32_t a, uint32_t b) {
@@ -322,23 +450,9 @@ int OpenUNBDemodulator::findPreambles(int ch) {
 
         }
 
-        /*
-        if (b)
-            bcount++;
-
-        if (bcount > 32) {
-            bcount = 0;
-            b = false;
-
-            std::cout << " Channel: " << ch << std::endl;
-            std::cout << " Data: " << uint32ToSring(corr[ch]) << std::endl;
-            std::cout << "~Data: " << uint32ToSring(inv_corr[ch]) << std::endl;
-            std::cout << " Expt: " << uint32ToSring(prea) << std::endl;
-            std::cout << " Err: " << err1 << " " << err2 << " " << err3 << " " << err4 << " " << std::endl;
-        }
-        */
-
     }
+    if (x != 32)
+        channeslData[ch].erase(channeslData[ch].begin(), channeslData[ch].end() - 32);
 
     return ret;
 }
@@ -399,3 +513,13 @@ void OpenUNBDemodulator::dumpToFile(std::string fileName, void *data, size_t siz
         file.close();
     }
 }
+
+void OpenUNBDemodulator::guiThread(int argc, char *argv[]) {
+    QApplication a(argc, argv);
+    window = new MainWindow();
+    window->show();
+    a.exec();
+
+    exit(0);
+}
+

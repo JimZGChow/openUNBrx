@@ -35,6 +35,12 @@ private:
 
     void run();
 
+
+    int counter = 2;
+    int errors = 0;
+    float maxMagn;
+    int maxMagnCh;
+    float snr;
 };
 
 #endif // DECODER_H

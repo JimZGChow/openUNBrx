@@ -1,5 +1,9 @@
 #include "decoder.h"
 
+//#define DEC_LOG
+//#define FILE_DUMP
+//#define TEST_COUNTER
+
 OpenUNBDecoder::OpenUNBDecoder(int symLen) {
     //initOpenUNBCodec();
 
@@ -33,8 +37,12 @@ int getErrors(std::vector<uint8_t> a, std::vector<uint8_t> b) {
     return  err;
 }
 
-//#define DEC_LOG
-//#define FILE_DUMP
+
+int counter = 2;
+int errors = 0;
+float maxMagn;
+int maxMagnCh;
+float snr;
 
 void OpenUNBDecoder::run() {
     std::time_t result = std::time(nullptr);
@@ -64,12 +72,8 @@ void OpenUNBDecoder::run() {
             for (int i=1; i< pp->data.size(); i += symlen) {
                 float corr;
                 if (!(pp->inv & PreamblePoint::invIQ)) {
-                    //corr = (pp->data[i - 1].real() * pp->data[i].real() + pp->data[i - 1].imag() * pp->data[i].imag()) > 0 ? 1:0;
-                    //corr = pp->data[i - 1 * symlen].real() * pp->data[i].real() + pp->data[i - 1 * symlen].imag() * pp->data[i].imag();
                     corr = (pp->data[i] * std::complex<float>(pp->data[i-1].real(), -pp->data[i-1].imag())).imag();
                 } else {
-                    //corr = (-pp->data[i - 1].imag() * pp->data[i].real() + pp->data[i - 1].real() * pp->data[i].imag()) > 0 ? 1:0;
-                    //corr = -pp->data[i - 1 * symlen].imag() * pp->data[i].real() + pp->data[i - 1 * symlen].real() * pp->data[i].imag();
                     corr = (pp->data[i] * std::complex<float>(pp->data[i-1].real(), -pp->data[i-1].imag())).real();
                 }
 
@@ -85,9 +89,6 @@ void OpenUNBDecoder::run() {
             }
             std::vector<float> tmp(256);
             std::vector<uint8_t> tmpb(256);
-            //std::vector<uint8_t> tmpexp_enc = getVectorFromStringHex("6F7A15976F7A15976F7A15976F7A15976F7A15976F7A15976F7A15976F7A1597");
-            //std::vector<uint8_t> tmpexp_enc = getVectorFromStringHex("000000000000000007EA4AFD97B6DAA1234E0E39BD75ACC1A4F60755EED58E4A");
-            //std::vector<uint8_t> tmpexp = getVectorFromStringHex("4BF2EC8D3838EF5AF49EC177");//{0,1,1,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,1,0,1,0,0,0,0,0,0,0,1,0,0,0,1,0,1,0,1,0,0,0,0,0,0,0,1,0,0,1,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,1,1,1,1,1,1,0,0,1,0,0,1,1,1,1,1,1,1,0,0,0,0,1,1,1,0,1,0,0,0,0,0,0,0,1,1,0,0,0,0,0,1,1,0};
 
             for (int i=0; i<256; i++) {
                 tmp[i] = data[i + 32];
@@ -105,9 +106,8 @@ void OpenUNBDecoder::run() {
             rssi /= pp->data.size();
             rssi = 10*log10f(rssi);
 
-            //std::cout << pp->channel << ") Errors: " << getErrors(tmpb, tmpexp_enc) << std::endl;
 #ifdef DEC_LOG
-            if (pp->channel == 20 || true) {
+            if (pp->channel == 6 || pp->channel == 7) {
             std::cout << std::endl << "PP: " <<(int)pp->inv << "    Ch: " << pp->channel << std::endl;
             std::cout << "Recieved data: \n" << getStringBinFromVector(tmpb) << std::endl;
             //std::cout << "Expected data: \n" << getStringBinFromVector(tmpexp_enc) << std::endl;
@@ -123,7 +123,7 @@ void OpenUNBDecoder::run() {
 
             if (res.size() > 0) {
                 std::cout << " OpenUNB data! SNR: " << rssi - 10*log10f(pp->noise) << ", RSSI: " << rssi << ", NOISE: " << 10*log10f(pp->noise) << ", ch: " << pp->channel << ", iqAvgDiv: " << 20 * log10f(iAvg/qAvg) << std::endl;
-                //std::cout << " Data: { " << getStringHexFromVector(res) << " }" << std::endl;
+                std::cout << " Data: { " << getStringHexFromVector(res) << " }" << std::endl;
 
                 std::vector<uint8_t> dataHex = bits_to_byties(res);
                 uint32_t addr = 0;
@@ -134,29 +134,65 @@ void OpenUNBDecoder::run() {
                 memcpy(&crcIn, dataHex.data() + 5, 3);
 
                 char txOut[128];
-                sprintf(txOut, "Data: { addr: %.6X,\t payload: %.4X,\t crc: %.6X}", addr, payload, crcIn);
+                sprintf(txOut, "Data: { addr: %.6X,\t payload: %.4X,\t MIC: %.6X}", addr, payload, crcIn);
                 std::cout << "     " << txOut << std::endl;
 
-                uint32_t crcCalc = crc24(dataHex.data(), 5);
 
-                if (crcCalc == crcIn) {
-                    std::cout << "         CRC OK" <<std::endl;
-
-                    std::localtime(&result);
-                    std::string fname = "msg.txt";
-                    std::fstream file1(fname, std::ios_base::out | std::ios_base::app);
-
-                    if (file1.is_open()) {
-                        file1 << std::asctime(std::localtime(&result)) << " \t" << txOut << std::endl;
-                        file1.close();
+#ifdef TEST_COUNTER
+                if (addr == 0x1DC373) {
+                    if ((payload - counter > 1) && (payload - counter < 20)) {
+                        errors += payload - counter - 1;
                     }
-                    else {
-                        std::cout << "File error: " << std::strerror(errno) << std::endl;
+
+                    if (rssi > maxMagn) {
+                        maxMagn = rssi;
+                        maxMagnCh = pp->channel;
+                        snr = rssi - 10*log10f(pp->noise);
+                    }
+
+                    if (counter != payload) {
+                        printf("Errors: %d, counter: %d, lost: %.2f\n", errors, payload, (float)errors / payload * 100);
+                        printf(" RSSI: %.2f, SNR: %.2f, channel: %d\n", maxMagn, snr, maxMagnCh);
+                        maxMagn = rssi;
+                        maxMagnCh = pp->channel;
+
+                        std::string fname = "resultX_hackrf.txt";
+                        std::fstream file1(fname, std::ios_base::out | std::ios_base::app);
+
+                        if (file1.is_open()) {
+                            file1 << errors << " \t" << payload << std::endl;
+                            file1.close();
+                        }
+                        else {
+                            std::cout << "File error: " << std::strerror(errno) << std::endl;
+                        }
+
+                        counter = payload;
                     }
                 }
+#endif
+
+
             }
 
-//#endif
+            res = decode_96(tmp);
+
+            if (res.size() > 0) {
+                std::cout << " OpenUNB data! SNR: " << rssi - 10*log10f(pp->noise) << ", RSSI: " << rssi << ", NOISE: " << 10*log10f(pp->noise) << ", ch: " << pp->channel << ", iqAvgDiv: " << 20 * log10f(iAvg/qAvg) << std::endl;
+                std::cout << " Data: { " << getStringHexFromVector(res) << " }" << std::endl;
+
+                std::vector<uint8_t> dataHex = bits_to_byties(res);
+                uint32_t addr = 0;
+                uint64_t payload = 0;
+                uint32_t crcIn = 0;
+                memcpy(&addr, dataHex.data(), 3);
+                memcpy(&payload, dataHex.data() + 3, 6);
+                memcpy(&crcIn, dataHex.data() + 9, 3);
+
+                char txOut[128];
+                sprintf(txOut, "Data: { addr: %.6X,\t payload: %.12X,\t MIC: %.6X}", addr, payload, crcIn);
+                std::cout << "     " << txOut << std::endl;
+            }
             delete pp;
 
         } else {

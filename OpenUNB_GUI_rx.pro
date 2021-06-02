@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui# charts
+QT       += core gui charts
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -26,16 +26,18 @@ CONFIG += c++11
 
 SOURCES += \
         main.cpp \
-        #mainwindow.cpp \
+        mainwindow.cpp \
         SDRDevInfo.cpp \
         SoapyEnum.cpp \
         demodulator.cpp \
         decoder.cpp \
         singenerator.cpp \
-        preamblepoint.cpp
+        preamblepoint.cpp \
+        GNU_UDP_client.cpp
 
 HEADERS += \
-        #mainwindow.h \
+        fdacoefs_125K_to_200.h \
+        mainwindow.h \
         SDRDevInfo.h \
         SoapyEnum.h \
         demodulator.h \
@@ -44,10 +46,11 @@ HEADERS += \
         fdacoefs_1M_to_125K.h \
         fdacoefs_1M_to_100.h \
         singenerator.h \
-        preamblepoint.h
+        preamblepoint.h \
+        GNU_UDP_client.hpp
 
-#FORMS += \
-#        mainwindow.ui
+FORMS += \
+        mainwindow.ui
 
 INCLUDEPATH +=  /usr/local/include \
                 /usr/include/OpenUNB
@@ -58,7 +61,8 @@ LIBS += -L/usr/local/lib \
         -lSoapySDR \
         -pthread \
         -lOpenUNBCodecLib \
-        -lopenUNBCryptLib
+        -lopenUNBCryptLib \
+        -lvolk
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

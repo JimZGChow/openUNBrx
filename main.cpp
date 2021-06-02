@@ -3,6 +3,7 @@
 #include "demodulator.h"
 #include "udp_reciever.h"
 #include "preamblepoint.h"
+#include "GNU_UDP_client.hpp"
 
 #include <algorithm>
 #include <iostream>
@@ -36,14 +37,11 @@ void recvData(SoapySDR::Device* dev, SoapySDR::Stream* stream, std::vector<char>
     long maxTimeout = numElems / dev->getSampleRate(SOAPY_SDR_RX, 0) * 1000 * 1000;
 
     Buffs[0] = (void*)recvBuf->data();
-    OpenUNBDemodulator dem(dev->getSampleRate(SOAPY_SDR_RX, 0));
+    OpenUNBDemodulator dem(dev->getSampleRate(SOAPY_SDR_RX, 0), 4, 4);
 
     struct timespec begin, end;
-    //UDP_Reciever udp(recvBuf->size());
     while(!g_exitRecvThread){
         int n_stream_read = dev->readStream(stream, Buffs, numElems, flags, timeNs, maxTimeout);
-        //int n_stream_read = udp.readData((uint8_t*)Buffs[0]);
-
 
         if(n_stream_read < 0)
             std::cout << " Soapy read failed with code: " << n_stream_read << std::endl;
@@ -56,7 +54,7 @@ void recvData(SoapySDR::Device* dev, SoapySDR::Stream* stream, std::vector<char>
 
             double time = ((end.tv_sec - begin.tv_sec) + (end.tv_nsec - begin.tv_nsec)/1e9) * 1e6;
 
-            //std::cout << "Processing time: " << time << " ns (" << time / maxTimeout * 100 << " %) " << std::endl;
+            std::cout << "Processing time: " << time << " ns (" << time / maxTimeout * 100 << " %) " << std::endl;
         }
     }
 
@@ -67,6 +65,7 @@ int main(int argc, char *argv[]) {
 
     std::signal(SIGINT, ctrlC);
 
+
 #ifndef FILE
     double freq = 868000000.0;
 
@@ -75,7 +74,7 @@ int main(int argc, char *argv[]) {
 
     SoapyEnum sdr_enum;
 
-    std::string sdr_driver("rtlsdr");
+    std::string sdr_driver("hackrf");
 
     std::vector<SDRDevInfo*>* sdrDevices = sdr_enum.enumerateDevices();
 
@@ -159,7 +158,7 @@ int main(int argc, char *argv[]) {
                 soapyDev->setFrequency(SOAPY_SDR_RX, 0, freq);
                 soapyDev->setSampleRate(SOAPY_SDR_RX, 0, sampleRate);
 
-                soapyDev->setGain(SOAPY_SDR_RX, 0, 15.0);
+                soapyDev->setGain(SOAPY_SDR_RX, 0, 35.0);
                 soapyDev->setGainMode(SOAPY_SDR_RX, 0, true);
                 soapyDev->setDCOffsetMode(SOAPY_SDR_RX, 0, false);
                 soapyDev->writeSetting("digital_agc", "true");
@@ -188,21 +187,46 @@ int main(int argc, char *argv[]) {
         }
     }
 #else
-    Demodulator dem(1000000);
+    OpenUNBDemodulator dem(1000000, 2);
 
-    std::fstream f("/home/pi/1M_openUNB_96.complex");
+    std::fstream f("/home/def/workspace/OpenUNB/rxMy/build-OpenUNB_GUI_rx-Desktop_Qt_5_15_1_GCC_64bit-Debug/dump_s/1M.complex");
 
+    if ( !f.is_open()) {
+        return -1;
+    }
     float k=0;
 
-    int seek = 1000000 * 2 * sizeof(float) + 4000000;
-    int step = 1000000 * 2 * sizeof(float) * 1;
+    f.seekg(0, std::ios_base::end);
+    int e = f.tellg();
+    f.seekg(0, std::ios_base::beg);
+
+    std::cout << "File size: " << e << std::endl;
+    std::cout << "File time: " << e/sizeof(std::complex<float>)/1000000 << " s" << std::endl;
+
+    long startSeek = 0 * sizeof (fftwf_complex);
+    long long seek = startSeek;//;1000000 * 2 * sizeof(float) + 4000000;
+    long long step = 1024 * 128 * 2 * sizeof(float) * 1;
+    //long long step = e;
     char* data = new char[step];
+    memset(data, 1, step);
 
     const double mean = 0.0;
     double stddev = 0.5;
     std::default_random_engine generator;
     std::normal_distribution<float> dist(mean, 1.0);
 
+    struct timespec begin, end;
+    clock_gettime(CLOCK_REALTIME, &begin);
+    clock_gettime(CLOCK_REALTIME, &end);
+
+    int sr = 1000000;
+    double fr = 25;
+    double div = fr/sr;
+    double delta = 0.0f;
+
+    float c = -1.0;
+
+    clock_gettime(CLOCK_REALTIME, &begin);
     while(!g_exitRecvThread){
         int n_stream_read;
 
@@ -211,22 +235,41 @@ int main(int argc, char *argv[]) {
         f.read(data, step);
 
         float* dataf = (float*)data;
-        for (int i=0; i<step / (sizeof(float)); i++) {
-            dataf[i] += dist(generator) * stddev;
+        std::complex<float>* datac = (std::complex<float>*)data;
+        for (int i=0; i<step / (sizeof(float)); i+=2) {
+            std::complex<float> mul(cos(delta), sin(delta));
+            //dataf[i] += dist(generator) * stddev;
+            //dataf[i] = c;
+            //dataf[i + 1] = c;
+            //c += 0.01;
+
+            //if (c > 1)
+            //    c = -1.0;
+            //datac[i/2] = mul;
+            delta += div * 2 * M_PI;
         }
 
         dem.addIQ(data, step / (sizeof(float) * 2));
-        //usleep(1000000);
+        //usleep(step / (sizeof(float) * 2));
         seek += step;
-        if (seek > 60000000 - step) {
-            seek = 20000000;
+        if (seek > e - step) {
+            clock_gettime(CLOCK_REALTIME, &end);
+            double time = ((end.tv_sec - begin.tv_sec) + (end.tv_nsec - begin.tv_nsec)/1e9);
+            seek = startSeek;
 
+            //fr += 1;
+            //div = fr/sr;
             stddev += 0.01;
             if (stddev > 1.2)
                 stddev = 0.01;
-            std::cout << "stddev: " << stddev << std::endl;
+            std::cout << "======= Time: " << time << " sec" << std::endl;
+            clock_gettime(CLOCK_REALTIME, &begin);
         }
+        //std::cout << "============" << std::endl;
     }
+
+    //return a.exec();
+    return 0;
 #endif
 
     //return a.exec();
