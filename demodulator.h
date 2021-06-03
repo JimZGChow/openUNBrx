@@ -15,6 +15,11 @@
 #include <volk/volk.h>
 
 //#define QT_THREAD
+//#define WINDOW
+
+#ifdef WINDOW
+    #include "mainwindow.h"
+#endif
 
 #ifdef QT_THREAD
     #include <QThread>
@@ -25,7 +30,6 @@
 #include "fdacoefs_1M_to_125K.h"
 #include "preamblepoint.h"
 #include "decoder.h"
-#include "mainwindow.h"
 #include "GNU_UDP_client.hpp"
 
 #define DATA_LEN            256
@@ -62,12 +66,17 @@ private:
 #ifdef QT_THREAD
     void run();
 #endif
+
+#ifdef WINDOW
     MainWindow* window = nullptr;
     std::thread* guiTh;
-    udp_client* udp;
-    udp_client* udp2;
 
     void guiThread(int argc, char *argv[]);
+#endif
+
+
+    udp_client* udp;
+    udp_client* udp2;
 
     unsigned int X_CHANNELS = 4;
     unsigned int CHANNEL_SAMPLE_RATE = 100;

@@ -2,7 +2,8 @@
 
 //#define DEC_LOG
 //#define FILE_DUMP
-//#define TEST_COUNTER
+#define TEST_COUNTER
+//#define OUTPUT_MSG
 
 OpenUNBDecoder::OpenUNBDecoder(int symLen) {
     //initOpenUNBCodec();
@@ -38,12 +39,6 @@ int getErrors(std::vector<uint8_t> a, std::vector<uint8_t> b) {
 }
 
 
-int counter = 2;
-int errors = 0;
-float maxMagn;
-int maxMagnCh;
-float snr;
-
 void OpenUNBDecoder::run() {
     std::time_t result = std::time(nullptr);
     while (isRun) {
@@ -69,7 +64,7 @@ void OpenUNBDecoder::run() {
 
             std::vector<float> data;
             float max = 0.0;
-            for (int i=1; i< pp->data.size(); i += symlen) {
+            for (int i=33; i< pp->data.size(); i += symlen) {
                 float corr;
                 if (!(pp->inv & PreamblePoint::invIQ)) {
                     corr = (pp->data[i] * std::complex<float>(pp->data[i-1].real(), -pp->data[i-1].imag())).imag();
@@ -87,20 +82,11 @@ void OpenUNBDecoder::run() {
                 }
 
             }
-            std::vector<float> tmp(256);
-            std::vector<uint8_t> tmpb(256);
-
-            for (int i=0; i<256; i++) {
-                tmp[i] = data[i + 32];
-                tmpb[i] = data[i + 32] > 0 ? 0:1;
-            }
 
             float qAvg = 0;
             float iAvg = 0;
             float rssi = 0;
             for (int i=32; i < 64; i++) {
-                qAvg += fabs(pp->data[i].imag());
-                iAvg += fabs(pp->data[i].real());
                 rssi += pp->data[i].real() * pp->data[i].real() + pp->data[i].imag() * pp->data[i].imag();
             }
             rssi /= pp->data.size();
@@ -119,12 +105,13 @@ void OpenUNBDecoder::run() {
             }
 #endif
 
-            auto res = decode_64(tmp);
+            auto res = decode_64(data);
 
             if (res.size() > 0) {
-                std::cout << " OpenUNB data! SNR: " << rssi - 10*log10f(pp->noise) << ", RSSI: " << rssi << ", NOISE: " << 10*log10f(pp->noise) << ", ch: " << pp->channel << ", iqAvgDiv: " << 20 * log10f(iAvg/qAvg) << std::endl;
+#ifdef OUTPUT_MSG
+                std::cout << " OpenUNB data! SNR: " << rssi - 10*log10f(pp->noise) << ", RSSI: " << rssi << ", NOISE: " << 10*log10f(pp->noise) << ", ch: " << pp->channel << std::endl;
                 std::cout << " Data: { " << getStringHexFromVector(res) << " }" << std::endl;
-
+#endif
                 std::vector<uint8_t> dataHex = bits_to_byties(res);
                 uint32_t addr = 0;
                 uint16_t payload = 0;
@@ -133,10 +120,11 @@ void OpenUNBDecoder::run() {
                 memcpy(&payload, dataHex.data() + 3, 2);
                 memcpy(&crcIn, dataHex.data() + 5, 3);
 
+#ifdef OUTPUT_MSG
                 char txOut[128];
                 sprintf(txOut, "Data: { addr: %.6X,\t payload: %.4X,\t MIC: %.6X}", addr, payload, crcIn);
                 std::cout << "     " << txOut << std::endl;
-
+#endif
 
 #ifdef TEST_COUNTER
                 if (addr == 0x1DC373) {
@@ -175,12 +163,13 @@ void OpenUNBDecoder::run() {
 
             }
 
-            res = decode_96(tmp);
+            res = decode_96(data);
 
             if (res.size() > 0) {
+#ifdef OUTPUT_MSG
                 std::cout << " OpenUNB data! SNR: " << rssi - 10*log10f(pp->noise) << ", RSSI: " << rssi << ", NOISE: " << 10*log10f(pp->noise) << ", ch: " << pp->channel << ", iqAvgDiv: " << 20 * log10f(iAvg/qAvg) << std::endl;
                 std::cout << " Data: { " << getStringHexFromVector(res) << " }" << std::endl;
-
+#endif
                 std::vector<uint8_t> dataHex = bits_to_byties(res);
                 uint32_t addr = 0;
                 uint64_t payload = 0;
@@ -188,10 +177,11 @@ void OpenUNBDecoder::run() {
                 memcpy(&addr, dataHex.data(), 3);
                 memcpy(&payload, dataHex.data() + 3, 6);
                 memcpy(&crcIn, dataHex.data() + 9, 3);
-
+#ifdef OUTPUT_MSG
                 char txOut[128];
                 sprintf(txOut, "Data: { addr: %.6X,\t payload: %.12X,\t MIC: %.6X}", addr, payload, crcIn);
                 std::cout << "     " << txOut << std::endl;
+#endif
             }
             delete pp;
 

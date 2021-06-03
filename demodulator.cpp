@@ -51,7 +51,10 @@ OpenUNBDemodulator::OpenUNBDemodulator(int inSempleRate, int xChan, int _id) {
 
     id = _id;
 
+
+#ifdef WINDOW
     guiTh = new std::thread(&OpenUNBDemodulator::guiThread, this, 0, nullptr);
+#endif
 
     udp = new udp_client("192.168.159.1", 3333);
     udp2 = new udp_client("192.168.159.1", 3334);
@@ -158,8 +161,8 @@ void OpenUNBDemodulator::decimation() {
         float iC = 0.0;
         float qC = 0.0;
 
-        memcpy(dataToFir, dataIn[i], BL_1M_to_125K * sizeof(lv_32fc_t));
-        volk_32fc_32f_multiply_32fc(dataFromFir, dataToFir, B_1M_to_125K, BL_1M_to_125K);
+        //memcpy(dataToFir, dataIn[i], BL_1M_to_125K * sizeof(lv_32fc_t));
+        volk_32fc_32f_multiply_32fc(dataFromFir, (lv_32fc_t*)dataIn[i], B_1M_to_125K, BL_1M_to_125K);
         for (int j=0; j<BL_1M_to_125K; j++) {
             iC += dataFromFir[j].real();
             qC += dataFromFir[j].imag();
@@ -227,7 +230,9 @@ void OpenUNBDemodulator::channelize() {
         fftwf_execute(fftw_p);
         supX = (supX + 1) % SUPER_X;
 
+#ifdef WINDOW
         int chOut = 0;
+
         if (window) {
             chOut = window->getSelectedChannel();
         }
@@ -242,12 +247,14 @@ void OpenUNBDemodulator::channelize() {
                 udp->send((char*)udpData, sizeof(udpData));
             }
         }
+#endif
 
 
 
-
+#ifdef WINDOW
         if (window)
             window->push1MHzData(fftw_out, numOfChannels);
+#endif
 
         channeslDataSamples++;
 
@@ -514,6 +521,7 @@ void OpenUNBDemodulator::dumpToFile(std::string fileName, void *data, size_t siz
     }
 }
 
+#ifdef WINDOW
 void OpenUNBDemodulator::guiThread(int argc, char *argv[]) {
     QApplication a(argc, argv);
     window = new MainWindow();
@@ -522,4 +530,5 @@ void OpenUNBDemodulator::guiThread(int argc, char *argv[]) {
 
     exit(0);
 }
+#endif
 
