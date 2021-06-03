@@ -2,8 +2,8 @@
 
 //#define DEC_LOG
 //#define FILE_DUMP
-//#define TEST_COUNTER
-#define OUTPUT_MSG
+#define TEST_COUNTER
+//#define OUTPUT_MSG
 
 OpenUNBDecoder::OpenUNBDecoder(int symLen) {
     //initOpenUNBCodec();

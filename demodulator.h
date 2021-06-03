@@ -38,9 +38,6 @@
 #define MAX_NOISE_NUM       1000
 #define SUPER_X             2
 
-#define TABLES_NUM      50
-#define FFT_SIZE        (125000 / 100)
-
 #ifdef QT_THREAD
 class OpenUNBDemodulator : public QThread
 #else
@@ -136,8 +133,8 @@ private:
     unsigned int noiseNum = 0;
     unsigned int totalSamples = 0;
     unsigned int totalBatches = 0;
-    float** noise;
-    float avg(float*, size_t);
+    double** noise;
+    double avg(double*, size_t);
 
     std::string uint32ToSring(uint32_t);
 

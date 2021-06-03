@@ -15,7 +15,7 @@ public:
     std::vector<std::complex<float>> data;
     uint8_t inv;
     int added = 0;
-    float noise;
+    double noise;
     int pos;
     unsigned int  batch;
 

@@ -74,7 +74,7 @@ int main(int argc, char *argv[]) {
 
     SoapyEnum sdr_enum;
 
-    std::string sdr_driver("hackrf");
+    std::string sdr_driver("rtlsdr");
 
     std::vector<SDRDevInfo*>* sdrDevices = sdr_enum.enumerateDevices();
 
