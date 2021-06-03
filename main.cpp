@@ -15,7 +15,7 @@
 #include <time.h>
 #include <csignal>
 
-#define FILE
+//#define FILE
 
 int g_exitRecvThread = 0;
 
