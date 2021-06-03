@@ -119,7 +119,6 @@ void OpenUNBDemodulator::run() {
     channelize();
 
     if (channeslData[0].size() > 100) {
-
         for (int i=0; i<PreamblePointWithoutFullData.size(); i++) {
             if (PreamblePointWithoutFullData[i]->data.size() >= (DATA_LEN + PREAMBLE_LEN + 1) * SYM_LEN) {
                 //PreamblePointFullData.push_back(PreamblePointWithoutFullData[i]);
@@ -135,14 +134,10 @@ void OpenUNBDemodulator::run() {
 
         for (int i=0; i<numOfChannels; i++) {
             pr += findPreambles(i);
-            if (i == numOfChannels - 1) {
-                totalSamples += channeslData[i].size();
-                totalBatches++;
-            }
         }
 
-        if (pr)
-            std::cout << id << ") Preambles: " << pr << "(" << dec->size() << ")" << std::endl;
+        //if (pr)
+        //    std::cout << id << ") Preambles: " << pr << "(" << dec->size() << ")" << std::endl;
     }
 #ifdef QT_THREAD
     isRunning = false;
@@ -273,11 +268,12 @@ void OpenUNBDemodulator::channelize() {
         for (int ch=0; ch < numOfChannels / SUPER_X; ch++) {
             std::complex<float> c(fftw_out[ch][0], fftw_out[ch][1]);
             //noise += fftw_out[ch][0] * fftw_out[ch][0] + fftw_out[ch][1] * fftw_out[ch][1];
-            noise[ch * SUPER_X + supX][noiseNum] = fftw_out[ch][0] * fftw_out[ch][0] + fftw_out[ch][1] * fftw_out[ch][1];
+            //noise[ch * SUPER_X + supX][noiseNum] = fftw_out[ch][0] * fftw_out[ch][0] + fftw_out[ch][1] * fftw_out[ch][1];
 
             channeslData[ch * SUPER_X + supX].push_back(c);
         }
 
+        noise[CHANNELS/2][noiseNum] = fftw_out[numOfChannels / SUPER_X/2][0] * fftw_out[numOfChannels / SUPER_X/2][0] + fftw_out[numOfChannels / SUPER_X/2][1] * fftw_out[numOfChannels / SUPER_X/2][1];
         invers = !invers;
 
         shift = (shift + 1) % X_CHANNELS;
@@ -304,14 +300,12 @@ void OpenUNBDemodulator::channelize() {
 }
 
 int OpenUNBDemodulator::bitDif(uint32_t a, uint32_t b) {
-    int ret = 0;
-    uint64_t c = a ^ b;
-    for (int i=0; i<64; i++) {
-        if ((c >> i) & 1)
-            ret++;
-    }
+    uint32_t n = a ^ b;
+    n -= (n >> 1) & 0x55555555;
+    n = ((n >> 2) & 0x33333333) + (n & 0x33333333);
+    n = ((((n >> 4) + n) & 0x0F0F0F0F) * 0x01010101) >> 24;
+    return n;
 
-    return ret;
 }
 
 //#define FP_LOG
@@ -342,8 +336,11 @@ int OpenUNBDemodulator::findPreambles(int ch) {
 
         int err3 =  bitDif(corr[ch], ~prea);
         int err4 =  bitDif(inv_corr[ch], (prea));
+
+        double noiseD = 0.0;
         if (err1 <= MAX_ERRORS || err2 <= MAX_ERRORS || err3 <= MAX_ERRORS || err4 <= MAX_ERRORS) {
             b = true;
+            noiseD = avg(noise[numOfChannels/2], MAX_NOISE_NUM);
         }
 
 #ifdef FP_LOG
@@ -368,7 +365,7 @@ int OpenUNBDemodulator::findPreambles(int ch) {
             pp1->channel = ch;
             pp1->inv = 0;
             pp1->preableErrors = err1;
-            pp1->noise = avg(noise[numOfChannels/2], MAX_NOISE_NUM);
+            pp1->noise = noiseD;
             pp1->pos = x + totalSamples;
             pp1->batch = totalBatches;
             pp1->data.insert(pp1->data.begin(), channeslData[ch].begin() + x - 32,channeslData[ch].begin() + x - 32 + std::min(channeslData[ch].size() - x + 32, (size_t)(DATA_LEN + PREAMBLE_LEN + 1)));
@@ -392,7 +389,7 @@ int OpenUNBDemodulator::findPreambles(int ch) {
             pp2->channel = ch;
             pp2->inv = PreamblePoint::invIQ;
             pp2->preableErrors = err2;
-            pp2->noise = avg(noise[numOfChannels/2], MAX_NOISE_NUM);
+            pp2->noise = noiseD;
             pp2->pos = x + totalSamples;
             pp2->batch = totalBatches;
             pp2->data.insert(pp2->data.begin(), channeslData[ch].begin() + x - 32,channeslData[ch].begin() + x - 32 + std::min(channeslData[ch].size() - x + 32, (size_t)(DATA_LEN + PREAMBLE_LEN + 1)));
@@ -416,7 +413,7 @@ int OpenUNBDemodulator::findPreambles(int ch) {
             pp3->channel = ch;
             pp3->inv = PreamblePoint::invBits;
             pp3->preableErrors = err3;
-            pp3->noise = avg(noise[numOfChannels/2], MAX_NOISE_NUM);
+            pp3->noise = noiseD;
             pp3->pos = x + totalSamples;
             pp3->batch = totalBatches;
             pp3->data.insert(pp3->data.begin(), channeslData[ch].begin() + x - 32,channeslData[ch].begin() + x - 32 + std::min(channeslData[ch].size() - x + 32, (size_t)(DATA_LEN + PREAMBLE_LEN + 1)));
@@ -440,7 +437,7 @@ int OpenUNBDemodulator::findPreambles(int ch) {
             pp4->channel = ch;
             pp4->inv = PreamblePoint::invIQ | PreamblePoint::invBits;
             pp4->preableErrors = err4;
-            pp4->noise = avg(noise[numOfChannels/2], MAX_NOISE_NUM);
+            pp4->noise = noiseD;
             pp4->pos = x + totalSamples;
             pp4->batch = totalBatches;
             pp4->data.insert(pp4->data.begin(), channeslData[ch].begin() + x - 32,channeslData[ch].begin() + x - 32 + std::min(channeslData[ch].size() - x + 32, (size_t)(DATA_LEN + PREAMBLE_LEN + 1)));
@@ -515,7 +512,8 @@ double OpenUNBDemodulator::avg(double* data, size_t size) {
     for (size_t i=0; i<size; i++) {
         ret += data[i];
     }
-
+    //volk_32fc_
+    //volk_32f_s32f_calc_spectral_noise_floor_32f
 
     return ret/size;
 }

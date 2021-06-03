@@ -15,7 +15,7 @@
 #include <time.h>
 #include <csignal>
 
-//#define FILE
+#define FILE
 
 int g_exitRecvThread = 0;
 
@@ -74,7 +74,7 @@ int main(int argc, char *argv[]) {
 
     SoapyEnum sdr_enum;
 
-    std::string sdr_driver("rtlsdr");
+    std::string sdr_driver("hackrf");
 
     std::vector<SDRDevInfo*>* sdrDevices = sdr_enum.enumerateDevices();
 
@@ -187,7 +187,7 @@ int main(int argc, char *argv[]) {
         }
     }
 #else
-    OpenUNBDemodulator dem(1000000, 2);
+    OpenUNBDemodulator dem(1000000, 3);
 
     std::fstream f("/home/def/workspace/OpenUNB/rxMy/build-OpenUNB_GUI_rx-Desktop_Qt_5_15_1_GCC_64bit-Debug/dump_s/1M.complex");
 
@@ -236,8 +236,8 @@ int main(int argc, char *argv[]) {
 
         float* dataf = (float*)data;
         std::complex<float>* datac = (std::complex<float>*)data;
-        for (int i=0; i<step / (sizeof(float)); i+=2) {
-            std::complex<float> mul(cos(delta), sin(delta));
+        //for (int i=0; i<step / (sizeof(float)); i+=2) {
+        //    std::complex<float> mul(cos(delta), sin(delta));
             //dataf[i] += dist(generator) * stddev;
             //dataf[i] = c;
             //dataf[i + 1] = c;
@@ -246,8 +246,8 @@ int main(int argc, char *argv[]) {
             //if (c > 1)
             //    c = -1.0;
             //datac[i/2] = mul;
-            delta += div * 2 * M_PI;
-        }
+            //delta += div * 2 * M_PI;
+        //}
 
         dem.addIQ(data, step / (sizeof(float) * 2));
         //usleep(step / (sizeof(float) * 2));
