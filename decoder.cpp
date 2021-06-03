@@ -2,8 +2,8 @@
 
 //#define DEC_LOG
 //#define FILE_DUMP
-#define TEST_COUNTER
-//#define OUTPUT_MSG
+//#define TEST_COUNTER
+#define OUTPUT_MSG
 
 OpenUNBDecoder::OpenUNBDecoder(int symLen) {
     //initOpenUNBCodec();
@@ -90,7 +90,7 @@ void OpenUNBDecoder::run() {
                 rssi += pp->data[i].real() * pp->data[i].real() + pp->data[i].imag() * pp->data[i].imag();
             }
             rssi /= pp->data.size();
-            rssi = 10*log10f(rssi);
+            rssi = 10*log10(rssi);
 
 #ifdef DEC_LOG
             if (pp->channel == 6 || pp->channel == 7) {
@@ -109,7 +109,7 @@ void OpenUNBDecoder::run() {
 
             if (res.size() > 0) {
 #ifdef OUTPUT_MSG
-                std::cout << " OpenUNB data! SNR: " << rssi - 10*log10f(pp->noise) << ", RSSI: " << rssi << ", NOISE: " << 10*log10f(pp->noise) << ", ch: " << pp->channel << std::endl;
+                std::cout << " OpenUNB data! SNR: " << rssi - 10*log10(pp->noise) << ", RSSI: " << rssi << ", NOISE: " << 10*log10(pp->noise) << ", ch: " << pp->channel << std::endl;
                 std::cout << " Data: { " << getStringHexFromVector(res) << " }" << std::endl;
 #endif
                 std::vector<uint8_t> dataHex = bits_to_byties(res);
@@ -135,7 +135,7 @@ void OpenUNBDecoder::run() {
                     if (rssi > maxMagn) {
                         maxMagn = rssi;
                         maxMagnCh = pp->channel;
-                        snr = rssi - 10*log10f(pp->noise);
+                        snr = rssi - 10*log10(pp->noise);
                     }
 
                     if (counter != payload) {
@@ -167,7 +167,7 @@ void OpenUNBDecoder::run() {
 
             if (res.size() > 0) {
 #ifdef OUTPUT_MSG
-                std::cout << " OpenUNB data! SNR: " << rssi - 10*log10f(pp->noise) << ", RSSI: " << rssi << ", NOISE: " << 10*log10f(pp->noise) << ", ch: " << pp->channel << ", iqAvgDiv: " << 20 * log10f(iAvg/qAvg) << std::endl;
+                std::cout << " OpenUNB data! SNR: " << rssi - 10*log10(pp->noise) << ", RSSI: " << rssi << ", NOISE: " << 10*log10(pp->noise) << ", ch: " << pp->channel << ", iqAvgDiv: " << 20 * log10(iAvg/qAvg) << std::endl;
                 std::cout << " Data: { " << getStringHexFromVector(res) << " }" << std::endl;
 #endif
                 std::vector<uint8_t> dataHex = bits_to_byties(res);

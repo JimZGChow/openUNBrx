@@ -293,7 +293,9 @@ void OpenUNBDemodulator::channelize() {
         fclose(f);
 #endif
 
+#ifdef WINDOW
         udp2->send((char*)decimatedData.data(), std::min(32*1024, i*2 * 4));
+#endif
         decimatedData.erase(decimatedData.begin(), decimatedData.begin() + i*2);
     }
 

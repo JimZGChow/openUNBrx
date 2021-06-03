@@ -37,7 +37,7 @@ void recvData(SoapySDR::Device* dev, SoapySDR::Stream* stream, std::vector<char>
     long maxTimeout = numElems / dev->getSampleRate(SOAPY_SDR_RX, 0) * 1000 * 1000;
 
     Buffs[0] = (void*)recvBuf->data();
-    OpenUNBDemodulator dem(dev->getSampleRate(SOAPY_SDR_RX, 0), 4, 4);
+    OpenUNBDemodulator dem(dev->getSampleRate(SOAPY_SDR_RX, 0), 2);
 
     struct timespec begin, end;
     while(!g_exitRecvThread){
@@ -74,7 +74,7 @@ int main(int argc, char *argv[]) {
 
     SoapyEnum sdr_enum;
 
-    std::string sdr_driver("rtlsdr");
+    std::string sdr_driver("hackrf");
 
     std::vector<SDRDevInfo*>* sdrDevices = sdr_enum.enumerateDevices();
 
