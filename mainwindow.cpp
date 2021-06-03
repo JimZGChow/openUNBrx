@@ -1,12 +1,13 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
-MainWindow::MainWindow(QWidget *parent)
+MainWindow::MainWindow(int _channels, QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow) {
     ui->setupUi(this);
+    channels = _channels;
 
-    connect(ui->pushButton_connect, SIGNAL (released()), this, SLOT (evtConnetc()));
+    //connect(ui->pushButton_connect, SIGNAL (released()), this, SLOT (evtConnetc()));
     connect(ui->checkBox_run_1mhz, SIGNAL(stateChanged(int)), this, SLOT(evtCheckBoxRun(int)));
     connect(ui->checkBox_run_100hz, SIGNAL(stateChanged(int)), this, SLOT(evtCheckBoxRun(int)));
 
@@ -37,7 +38,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     qChart1M->addSeries(qLineSeries1M);
     QValueAxis *axisX = new QValueAxis;
-    axisX->setRange(-CHAN_NUM/5, CHAN_NUM/5);
+    axisX->setRange(-channels/2, channels/2);
     axisX->setLabelFormat("%g");
     axisX->setTitleText("Freq");
     QValueAxis *axisY = new QValueAxis;
@@ -118,7 +119,7 @@ MainWindow::~MainWindow() {
 
 void MainWindow::evtConnected() {
     ui->textBrowser_log->append("Connected!");
-    ui->pushButton_connect->setText("Connected");
+    //ui->pushButton_connect->setText("Connected");
 }
 
 
@@ -216,7 +217,7 @@ void MainWindow::wheelEvent(QWheelEvent *event) {
 
 void  MainWindow::evtChangeChannel() {
     outChNum = ui->lineEdit_100hz->text().toInt();
-    if (outChNum < 0 || outChNum > CHAN_NUM)
+    if (outChNum < 0 || outChNum > channels)
         outChNum = 0;
 
 
@@ -298,7 +299,7 @@ void MainWindow::push1MHzData(fftwf_complex *data_in, int size) {
         else
             pos = i - size/2;
 
-        m_buffer.push_back(QPointF(i - CHAN_NUM/2, 10*log10f(data_in[pos][0]*data_in[pos][0] + data_in[pos][1]*data_in[pos][1])));
+        m_buffer.push_back(QPointF(i - channels/2, 10*log10f(data_in[pos][0]*data_in[pos][0] + data_in[pos][1]*data_in[pos][1])));
         if (m_buffer[i].y() > max.y() && m_buffer[i].x() != -1 && m_buffer[i].x() != 0 && m_buffer[i].x() != 1) {
             max.setY(m_buffer[i].y());
             max.setX(m_buffer[i].x());
@@ -405,4 +406,27 @@ void MainWindow::update100HzData() {
     else
         qLineSeries100_Bit->clear();
 #endif
+}
+
+
+void MainWindow::addProcessTime(double time) {
+    processTime[processTimePtr] = time;
+    processTimePtr = (processTimePtr + 1) % MAX_TIME_NUM;
+
+    double timeAvg = 0;
+    for (int i=0; i<MAX_TIME_NUM; i++) {
+        timeAvg += processTime[i];
+    }
+    timeAvg /= MAX_TIME_NUM;
+
+    ui->progressBar_time->setValue(timeAvg);
+}
+
+void MainWindow::setPreamble(int pr) {
+    if (pr > maxPreambles) {
+        maxPreambles = pr;
+        ui->progressBar_pr->setMaximum(maxPreambles);
+    }
+
+    ui->progressBar_pr->setValue(pr);
 }

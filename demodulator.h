@@ -15,7 +15,7 @@
 #include <volk/volk.h>
 
 //#define QT_THREAD
-//#define WINDOW
+#define WINDOW
 
 #ifdef WINDOW
     #include "mainwindow.h"
@@ -55,6 +55,9 @@ public:
 
     void addIQ(void* data, int sizeInSamples);
     void setCallback(void (*clb_f)(uint8_t* data, size_t size));
+    void setMaxTimeout(long timeout);
+
+    long timeout = 1;
 private:
     int numOfChannels;
     int decimationK;

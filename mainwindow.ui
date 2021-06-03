@@ -23,6 +23,9 @@
    <layout class="QGridLayout" name="gridLayout">
     <item row="0" column="0">
      <widget class="QTabWidget" name="tabWidget">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
       <property name="sizePolicy">
        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
         <horstretch>0</horstretch>
@@ -33,7 +36,7 @@
        <enum>Qt::LeftToRight</enum>
       </property>
       <property name="currentIndex">
-       <number>2</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="tab_controll">
        <attribute name="title">
@@ -41,37 +44,36 @@
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_2">
         <item>
-         <widget class="QLabel" name="label_ip">
+         <widget class="QLabel" name="label_preables">
           <property name="text">
-           <string>IP</string>
+           <string>Preambles is the stack</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QLineEdit" name="lineEdit_ip">
-          <property name="text">
-           <string>169.254.99.69</string>
+         <widget class="QProgressBar" name="progressBar_pr">
+          <property name="maximum">
+           <number>1000</number>
+          </property>
+          <property name="value">
+           <number>0</number>
+          </property>
+          <property name="format">
+           <string>%v / %m</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QLabel" name="label_port">
+         <widget class="QLabel" name="label_process_time">
           <property name="text">
-           <string>Port</string>
+           <string>Processing time</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QLineEdit" name="lineEdit_ip_port">
-          <property name="text">
-           <string>8888</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="pushButton_connect">
-          <property name="text">
-           <string>Connect</string>
+         <widget class="QProgressBar" name="progressBar_time">
+          <property name="value">
+           <number>24</number>
           </property>
          </widget>
         </item>
@@ -105,6 +107,9 @@
        </layout>
       </widget>
       <widget class="QWidget" name="tab_100Hz">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
        <attribute name="title">
         <string>100Hz</string>
        </attribute>
@@ -226,7 +231,7 @@
      <x>0</x>
      <y>0</y>
      <width>925</width>
-     <height>17</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>

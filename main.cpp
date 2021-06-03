@@ -39,6 +39,8 @@ void recvData(SoapySDR::Device* dev, SoapySDR::Stream* stream, std::vector<char>
     Buffs[0] = (void*)recvBuf->data();
     OpenUNBDemodulator dem(dev->getSampleRate(SOAPY_SDR_RX, 0), 2);
 
+    dem.timeout = maxTimeout;
+
     struct timespec begin, end;
     while(!g_exitRecvThread){
         int n_stream_read = dev->readStream(stream, Buffs, numElems, flags, timeNs, maxTimeout);

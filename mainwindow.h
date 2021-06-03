@@ -24,7 +24,6 @@
 #endif
 
 #define RECIEVE_ALL_DATA    0
-#define CHAN_NUM    (1250*4)
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -34,18 +33,22 @@ QT_END_NAMESPACE
 QT_CHARTS_USE_NAMESPACE
 #endif
 
+#define MAX_TIME_NUM 50
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
 public:
-    MainWindow(QWidget *parent = nullptr);
+    MainWindow(int channels, QWidget *parent = nullptr);
     ~MainWindow();
 
     int getSelectedChannel();
     float getSelectedFreq();
     void push100HzData(float* data_in);
     void push1MHzData(fftwf_complex* data_in, int size);
+    void addProcessTime(double time);
+    void setPreamble(int pr);
 
 private:
     Ui::MainWindow* ui;
@@ -78,6 +81,8 @@ private:
     int outChNum = 0;
     int div = 1;
 
+    int channels = 5000;
+
     SinCosGenerator* sinG;
 #ifdef FFTW3F
     const int sempNum = maxIQ;
@@ -89,6 +94,9 @@ private:
     void wheelEvent(QWheelEvent *event);
     void update100HzData();
 
+    float processTime[MAX_TIME_NUM] = {0};
+    int processTimePtr = 0;
+    int maxPreambles = 1000;
 private slots:
     //void evtConnetc();
     void evtConnected();
@@ -99,5 +107,6 @@ private slots:
     void evtChangeChannel();
     void evtChangeDiv();
     void evtChangeFreq();
+
 };
 #endif // MAINWINDOW_H

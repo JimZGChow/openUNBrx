@@ -100,6 +100,8 @@ void OpenUNBDemodulator::setCallback(void (*clb_f)(uint8_t* data, size_t size)) 
 
 
 void OpenUNBDemodulator::addIQ(void* data, int size) {
+    struct timespec begin, end;
+    clock_gettime(CLOCK_REALTIME, &begin);
 
     float* dataPtr = (float*)data;
 
@@ -136,12 +138,24 @@ void OpenUNBDemodulator::run() {
             pr += findPreambles(i);
         }
 
+#ifdef WINDOW
+        if (window)
+            window->setPreamble(dec->size());
+#endif
         //if (pr)
         //    std::cout << id << ") Preambles: " << pr << "(" << dec->size() << ")" << std::endl;
     }
 #ifdef QT_THREAD
     isRunning = false;
 
+#endif
+    clock_gettime(CLOCK_REALTIME, &end);
+
+#ifdef WINDOW
+    double time = ((end.tv_sec - begin.tv_sec) + (end.tv_nsec - begin.tv_nsec)/1e9) * 1e6;
+    if (window)
+        window->addProcessTime(time / timeout * 100);
+    //std::cout << "Processing time: " << time << " ns (" << time / maxTimeout * 100 << " %) " << std::endl;
 #endif
 }
 
@@ -245,12 +259,6 @@ void OpenUNBDemodulator::channelize() {
 #endif
 
 
-
-#ifdef WINDOW
-        if (window)
-            window->push1MHzData(fftw_out, numOfChannels);
-#endif
-
         channeslDataSamples++;
 
 #ifdef DUMP_TO_FILE
@@ -278,8 +286,13 @@ void OpenUNBDemodulator::channelize() {
 
         shift = (shift + 1) % X_CHANNELS;
 
-        if (shift == 0)
+        if (shift == 0) {
             noiseNum = (noiseNum + 1) % MAX_NOISE_NUM;
+#ifdef WINDOW
+            if (window)
+                window->push1MHzData(fftw_out, numOfChannels / SUPER_X);
+#endif
+        }
     }
 
     if (i != 0) {
@@ -529,7 +542,7 @@ void OpenUNBDemodulator::dumpToFile(std::string fileName, void *data, size_t siz
 #ifdef WINDOW
 void OpenUNBDemodulator::guiThread(int argc, char *argv[]) {
     QApplication a(argc, argv);
-    window = new MainWindow();
+    window = new MainWindow(CHANNELS/SUPER_X);
     window->show();
     a.exec();
 
